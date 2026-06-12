@@ -58,3 +58,17 @@ This project is maintained by Gyujin Lee.
 ## License
 
 This project is licensed under the MIT License.
+
+## Project structure
+
+- `data/sample_economic_data.csv`: sample macroeconomic dataset
+- `examples/analyze_macro_data.py`: example Python script for analysis and visualization
+- `src/econkit.py`: reusable Python functions for economic data analysis
+- `requirements.txt`: required Python packages
+
+## How to use this project
+
+First, install the required Python packages:
+
+```bash
+pip install -r requirements.txt
