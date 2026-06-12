@@ -72,3 +72,23 @@ First, install the required Python packages:
 
 ```bash
 pip install -r requirements.txt
+```
+
+Then run the example analysis:
+
+```bash
+python examples/analyze_macro_data.py
+```
+
+The example script loads the sample economic dataset, prints summary statistics, and creates simple visualizations for inflation and GDP growth.
+
+## Example dataset
+
+The sample dataset includes basic macroeconomic indicators:
+
+* GDP growth
+* Inflation rate
+* Unemployment rate
+* Interest rate
+
+This dataset is designed for educational practice and beginner-friendly economic data analysis.
