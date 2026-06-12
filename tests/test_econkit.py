@@ -14,12 +14,10 @@ data = pd.DataFrame({
 "gdp_growth": [-0.7, 4.3, 2.6]
 })
 
-```
 summary = calculate_summary_statistics(data)
 
 assert "gdp_growth" in summary.columns
 assert summary.loc["count", "gdp_growth"] == 3
-```
 
 def test_calculate_average_growth():
 data = pd.DataFrame({
@@ -27,11 +25,9 @@ data = pd.DataFrame({
 "gdp_growth": [-0.7, 4.3, 2.6]
 })
 
-```
 average_growth = calculate_average_growth(data, "gdp_growth")
 
 assert round(average_growth, 2) == 2.07
-```
 
 def test_find_highest_value_year():
 data = pd.DataFrame({
@@ -39,9 +35,7 @@ data = pd.DataFrame({
 "inflation_rate": [0.5, 2.5, 5.1]
 })
 
-```
 highest_row = find_highest_value_year(data, "inflation_rate")
 
 assert highest_row["year"] == 2022
 assert highest_row["inflation_rate"] == 5.1
-```
