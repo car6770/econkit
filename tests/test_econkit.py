@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-project_root = Path(**file**).resolve().parents[1]
+project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root / "src"))
 
 from econkit import calculate_average_growth, calculate_summary_statistics, find_highest_value_year
