@@ -92,3 +92,15 @@ The sample dataset includes basic macroeconomic indicators:
 * Interest rate
 
 This dataset is designed for educational practice and beginner-friendly economic data analysis.
+
+## Contributing
+
+Contributions are welcome.
+
+Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute to this project.
+
+## Code of Conduct
+
+This project follows a simple code of conduct to keep the community respectful and beginner-friendly.
+
+Please read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) file before participating in discussions or contributions.
