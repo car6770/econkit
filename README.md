@@ -16,6 +16,25 @@ Many economics students want to analyze real-world economic data but struggle wi
 
 EconKit aims to make economics data analysis easier by providing simple Python examples, documentation, and reusable workflows.
 
+## Educational purpose
+
+EconKit is designed as an educational open-source project for economics students who are learning Python-based data analysis.
+
+Many economics students study macroeconomic concepts such as inflation, GDP growth, unemployment, and interest rates, but they often lack simple, beginner-friendly examples that connect economic theory with actual data analysis workflows.
+
+This project aims to provide reusable examples, small datasets, clear documentation, and simple Python functions so that students can practice economic data analysis step by step.
+
+## Maintenance plan
+
+This repository will be maintained through regular updates, including:
+
+* Adding new economics datasets
+* Improving beginner-friendly tutorials
+* Adding tests for core functions
+* Expanding documentation
+* Reviewing issues and planned improvements
+* Creating small releases as the project grows
+
 ## Main features
 
 - Clean economic datasets
