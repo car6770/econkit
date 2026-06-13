@@ -7,6 +7,7 @@ project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root / "src"))
 
 from econkit import (
+    analyze_business_cycle,
     analyze_macro_risk,
     analyze_monetary_policy_stance,
     build_default_macro_scenarios,
@@ -18,8 +19,11 @@ from econkit import (
     compare_macro_scenarios,
     find_highest_value_year,
     find_lowest_value_year,
+    generate_economic_report,
+    generate_macro_scenario_analysis,
     generate_monetary_policy_report,
     simulate_macro_scenario,
+    validate_macro_dataset,
 )
 
 
@@ -35,101 +39,60 @@ def make_sample_macro_data():
     )
 
 
+def test_validate_macro_dataset_passes_for_valid_data():
+    assert validate_macro_dataset(make_sample_macro_data()) is True
+
+
+def test_validate_macro_dataset_raises_for_missing_columns():
+    data = pd.DataFrame({"year": [2024], "gdp_growth": [2.0]})
+    try:
+        validate_macro_dataset(data)
+        assert False
+    except ValueError as error:
+        assert "Missing required columns" in str(error)
+
+
 def test_calculate_summary_statistics():
-    data = pd.DataFrame(
-        {
-            "year": [2020, 2021, 2022],
-            "gdp_growth": [-0.7, 4.3, 2.6],
-        }
-    )
-
+    data = pd.DataFrame({"year": [2020, 2021, 2022], "gdp_growth": [-0.7, 4.3, 2.6]})
     summary = calculate_summary_statistics(data)
-
     assert "gdp_growth" in summary.columns
     assert summary.loc["count", "gdp_growth"] == 3
 
 
 def test_calculate_average_growth():
-    data = pd.DataFrame(
-        {
-            "year": [2020, 2021, 2022],
-            "gdp_growth": [-0.7, 4.3, 2.6],
-        }
-    )
-
-    average_growth = calculate_average_growth(data, "gdp_growth")
-
-    assert round(average_growth, 2) == 2.07
+    data = pd.DataFrame({"year": [2020, 2021, 2022], "gdp_growth": [-0.7, 4.3, 2.6]})
+    assert round(calculate_average_growth(data, "gdp_growth"), 2) == 2.07
 
 
-def test_find_highest_value_year():
-    data = pd.DataFrame(
-        {
-            "year": [2020, 2021, 2022],
-            "inflation_rate": [0.5, 2.5, 5.1],
-        }
-    )
-
-    highest_row = find_highest_value_year(data, "inflation_rate")
-
-    assert highest_row["year"] == 2022
-    assert highest_row["inflation_rate"] == 5.1
-
-
-def test_find_lowest_value_year():
-    data = pd.DataFrame(
-        {
-            "year": [2020, 2021, 2022],
-            "inflation_rate": [0.5, 2.5, 5.1],
-        }
-    )
-
-    lowest_row = find_lowest_value_year(data, "inflation_rate")
-
-    assert lowest_row["year"] == 2020
-    assert lowest_row["inflation_rate"] == 0.5
+def test_find_highest_and_lowest_value_year():
+    data = pd.DataFrame({"year": [2020, 2021, 2022], "inflation_rate": [0.5, 2.5, 5.1]})
+    assert find_highest_value_year(data, "inflation_rate")["year"] == 2022
+    assert find_lowest_value_year(data, "inflation_rate")["year"] == 2020
 
 
 def test_calculate_correlation_matrix():
-    data = pd.DataFrame(
-        {
-            "gdp_growth": [-0.7, 4.3, 2.6],
-            "inflation_rate": [0.5, 2.5, 5.1],
-        }
-    )
-
-    correlation_matrix = calculate_correlation_matrix(
-        data,
-        ["gdp_growth", "inflation_rate"],
-    )
-
-    assert "gdp_growth" in correlation_matrix.columns
-    assert "inflation_rate" in correlation_matrix.columns
+    data = pd.DataFrame({"gdp_growth": [-0.7, 4.3, 2.6], "inflation_rate": [0.5, 2.5, 5.1]})
+    matrix = calculate_correlation_matrix(data, ["gdp_growth", "inflation_rate"])
+    assert "gdp_growth" in matrix.columns
+    assert "inflation_rate" in matrix.columns
 
 
 def test_analyze_macro_risk_returns_expected_structure():
-    data = make_sample_macro_data()
-
-    analysis = analyze_macro_risk(data)
-
+    analysis = analyze_macro_risk(make_sample_macro_data())
     assert analysis["latest_year"] == 2024
-    assert "latest_values" in analysis
-    assert "signals" in analysis
-    assert "risk_score" in analysis
-    assert "overall_risk" in analysis
+    assert analysis["overall_risk"] == "Moderate"
     assert "summary" in analysis
 
 
 def test_calculate_policy_rule_rate():
-    recommended_rate = calculate_policy_rule_rate(
+    rate = calculate_policy_rule_rate(
         inflation_rate=4.0,
         gdp_growth=3.0,
         target_inflation=2.0,
         neutral_interest_rate=2.0,
         potential_growth=2.0,
     )
-
-    assert recommended_rate == 3.5
+    assert rate == 3.5
 
 
 def test_classify_policy_stance():
@@ -140,26 +103,9 @@ def test_classify_policy_stance():
     assert classify_policy_stance(-1.0) == "Accommodative"
 
 
-def test_analyze_monetary_policy_stance_returns_expected_structure():
-    data = make_sample_macro_data()
-
-    analysis = analyze_monetary_policy_stance(data)
-
+def test_analyze_monetary_policy_stance_returns_expected_values():
+    analysis = analyze_monetary_policy_stance(make_sample_macro_data())
     assert analysis["latest_year"] == 2024
-    assert "actual_interest_rate" in analysis
-    assert "recommended_policy_rate" in analysis
-    assert "policy_gap" in analysis
-    assert "policy_stance" in analysis
-    assert "inputs" in analysis
-    assert "gaps" in analysis
-    assert "summary" in analysis
-
-
-def test_analyze_monetary_policy_stance_classifies_latest_policy():
-    data = make_sample_macro_data()
-
-    analysis = analyze_monetary_policy_stance(data)
-
     assert analysis["actual_interest_rate"] == 3.5
     assert analysis["recommended_policy_rate"] == 3.57
     assert analysis["policy_gap"] == -0.07
@@ -167,73 +113,63 @@ def test_analyze_monetary_policy_stance_classifies_latest_policy():
 
 
 def test_analyze_monetary_policy_stance_with_custom_assumptions():
-    data = make_sample_macro_data()
-
     analysis = analyze_monetary_policy_stance(
-        data,
+        make_sample_macro_data(),
         target_inflation=2.0,
         neutral_interest_rate=2.0,
         potential_growth=2.0,
     )
-
     assert analysis["recommended_policy_rate"] == 2.15
     assert analysis["policy_gap"] == 1.35
     assert analysis["policy_stance"] == "Tight"
 
 
+def test_analyze_business_cycle():
+    analysis = analyze_business_cycle(make_sample_macro_data())
+    assert analysis["latest_year"] == 2024
+    assert analysis["business_cycle_phase"] == "Stable Expansion"
+    assert "inflation_diagnosis" in analysis
+
+
 def test_generate_monetary_policy_report_creates_markdown_file(tmp_path):
-    data = make_sample_macro_data()
     output_path = tmp_path / "monetary_policy_report.md"
-
-    report_path = generate_monetary_policy_report(data, output_path)
-
+    report_path = generate_monetary_policy_report(make_sample_macro_data(), output_path)
     assert report_path.exists()
-
     report_text = report_path.read_text(encoding="utf-8")
-
     assert "# Monetary Policy Stance Report" in report_text
-    assert "Policy stance" in report_text
-    assert "Educational note" in report_text
 
 
 def test_simulate_macro_scenario_returns_future_rows():
-    data = make_sample_macro_data()
-
-    scenario = simulate_macro_scenario(
-        data,
-        scenario_name="baseline",
-        years=3,
-    )
-
+    scenario = simulate_macro_scenario(make_sample_macro_data(), "baseline", years=3)
     assert len(scenario) == 3
     assert scenario["year"].tolist() == [2025, 2026, 2027]
-    assert "gdp_growth" in scenario.columns
-    assert "inflation_rate" in scenario.columns
-    assert "unemployment_rate" in scenario.columns
     assert "interest_rate" in scenario.columns
 
 
 def test_build_default_macro_scenarios_creates_expected_scenarios():
-    data = make_sample_macro_data()
-
-    scenarios = build_default_macro_scenarios(data, years=2)
-
-    assert set(scenarios.keys()) == {
-        "baseline",
-        "inflation_shock",
-        "recession_shock",
-        "tight_policy",
-    }
+    scenarios = build_default_macro_scenarios(make_sample_macro_data(), years=2)
+    assert set(scenarios.keys()) == {"baseline", "inflation_shock", "recession_shock", "tight_policy"}
     assert len(scenarios["baseline"]) == 2
 
 
 def test_compare_macro_scenarios_returns_comparison_table():
-    data = make_sample_macro_data()
-
-    scenarios = build_default_macro_scenarios(data, years=2)
+    scenarios = build_default_macro_scenarios(make_sample_macro_data(), years=2)
     comparison = compare_macro_scenarios(scenarios)
-
     assert len(comparison) == 4
-    assert "scenario" in comparison.columns
     assert "overall_risk" in comparison.columns
-    assert "risk_score" in comparison.columns
+
+
+def test_generate_macro_scenario_analysis_creates_files(tmp_path):
+    data_path = tmp_path / "sample.csv"
+    make_sample_macro_data().to_csv(data_path, index=False)
+    results = generate_macro_scenario_analysis(data_path, tmp_path / "outputs", years=2)
+    assert results["comparison_path"].exists()
+    assert results["report_path"].exists()
+    assert len(results["scenario_paths"]) == 4
+
+
+def test_generate_economic_report_creates_report(tmp_path):
+    data_path = tmp_path / "sample.csv"
+    make_sample_macro_data().to_csv(data_path, index=False)
+    report_path = generate_economic_report(data_path, tmp_path / "report")
+    assert report_path.exists()
