@@ -2,10 +2,25 @@ name: Run Tests
 
 on:
   push:
+    branches:
+      - main
+      - master
   pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econkit-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: Test EconKit
     runs-on: ubuntu-latest
 
     steps:
@@ -16,11 +31,36 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Upgrade packaging tools
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip setuptools wheel
 
-      - name: Run tests
+      - name: Install project dependencies
+        run: |
+          python -m pip install -r requirements.txt
+
+      - name: Install EconKit in editable mode
+        run: |
+          python -m pip install -e .
+
+      - name: Show environment
+        run: |
+          python --version
+          python -m pip --version
+          python -m pip list
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile src/econkit.py
+          python -m py_compile src/econkit_cli.py
+
+      - name: Run test suite
         run: |
           pytest
+
+      - name: Smoke test CLI
+        run: |
+          python src/econkit_cli.py features
+          python src/econkit_cli.py validate data/sample_economic_data.csv
