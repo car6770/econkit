@@ -232,6 +232,31 @@ Please read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) file before participati
 
 This project is maintained by Gyujin Lee.
 
+## Macro Scenario Simulator
+
+EconKit includes a simple macroeconomic scenario simulator.
+
+The simulator can generate and compare several beginner-friendly macroeconomic scenarios:
+
+* Baseline scenario
+* Inflation shock scenario
+* Recession shock scenario
+* Tight monetary policy scenario
+
+Run the scenario example with:
+
+python examples/run_macro_scenarios.py
+
+The scenario simulator generates:
+
+* Scenario CSV files
+* A scenario comparison table
+* A Markdown scenario analysis report
+
+This feature helps students understand how different macroeconomic shocks may affect GDP growth, inflation, unemployment, interest rates, and overall macro risk.
+
+The simulator is designed for educational use and is not intended to be a professional forecasting model.
+
 ## License
 
 This project is licensed under the MIT License.
