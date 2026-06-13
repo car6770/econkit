@@ -6,7 +6,14 @@ import pandas as pd
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root / "src"))
 
-from econkit import calculate_average_growth, calculate_correlation_matrix, calculate_summary_statistics, find_highest_value_year, find_lowest_value_year
+from econkit import (
+    analyze_macro_risk,
+    calculate_average_growth,
+    calculate_correlation_matrix,
+    calculate_summary_statistics,
+    find_highest_value_year,
+    find_lowest_value_year,
+)
 
 
 def test_calculate_summary_statistics():
@@ -43,6 +50,7 @@ def test_find_highest_value_year():
     assert highest_row["year"] == 2022
     assert highest_row["inflation_rate"] == 5.1
 
+
 def test_find_lowest_value_year():
     data = pd.DataFrame({
         "year": [2020, 2021, 2022],
@@ -68,3 +76,54 @@ def test_calculate_correlation_matrix():
 
     assert "gdp_growth" in correlation_matrix.columns
     assert "inflation_rate" in correlation_matrix.columns
+
+
+def test_analyze_macro_risk_returns_expected_structure():
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    analysis = analyze_macro_risk(data)
+
+    assert analysis["latest_year"] == 2024
+    assert "latest_values" in analysis
+    assert "signals" in analysis
+    assert "risk_score" in analysis
+    assert "overall_risk" in analysis
+    assert "summary" in analysis
+
+
+def test_analyze_macro_risk_classifies_latest_values():
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    analysis = analyze_macro_risk(data)
+
+    assert analysis["signals"]["inflation_pressure"] == "Normal"
+    assert analysis["signals"]["growth_condition"] == "Moderate"
+    assert analysis["signals"]["labor_market"] == "Tight"
+    assert analysis["signals"]["monetary_condition"] == "Tight"
+    assert analysis["overall_risk"] == "Moderate"
+
+
+def test_analyze_macro_risk_raises_error_for_missing_columns():
+    data = pd.DataFrame({
+        "year": [2024],
+        "gdp_growth": [2.0],
+        "inflation_rate": [2.3]
+    })
+
+    try:
+        analyze_macro_risk(data)
+        assert False
+    except ValueError as error:
+        assert "Missing required columns" in str(error)
