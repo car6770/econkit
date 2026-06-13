@@ -146,3 +146,9 @@ Run the report generator with:
 
 ```bash
 python examples/generate_report.py
+
+## Sample output
+
+A sample economic report is available here:
+
+[docs/sample_report.md](docs/sample_report.md)
