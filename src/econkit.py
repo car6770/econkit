@@ -439,3 +439,266 @@ def analyze_macro_risk(data):
     analysis["summary"] = generate_macro_risk_summary(analysis)
 
     return analysis
+
+def estimate_macro_baseline(data):
+    """
+    Estimate simple baseline macroeconomic conditions from historical data.
+
+    This function uses recent averages as educational baseline values.
+    It is not intended for professional forecasting.
+    """
+    required_columns = [
+        "year",
+        "gdp_growth",
+        "inflation_rate",
+        "unemployment_rate",
+        "interest_rate",
+    ]
+
+    missing_columns = [column for column in required_columns if column not in data.columns]
+
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    recent_data = data.sort_values("year").tail(5)
+
+    return {
+        "potential_growth": float(recent_data["gdp_growth"].mean()),
+        "target_inflation": 2.0,
+        "normal_unemployment": float(recent_data["unemployment_rate"].mean()),
+        "neutral_interest_rate": float(recent_data["interest_rate"].mean()),
+    }
+
+
+def simulate_macro_scenario(
+    data,
+    scenario_name,
+    years=5,
+    demand_shock=0.0,
+    supply_shock=0.0,
+    policy_shock=0.0,
+):
+    """
+    Simulate a simple macroeconomic scenario.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Historical macroeconomic dataset.
+    scenario_name : str
+        Name of the scenario.
+    years : int
+        Number of future years to simulate.
+    demand_shock : float
+        Positive values increase growth and inflation.
+        Negative values reduce growth.
+    supply_shock : float
+        Positive values increase inflation and reduce growth.
+    policy_shock : float
+        Positive values increase the interest rate path.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Simulated scenario dataset.
+    """
+    baseline = estimate_macro_baseline(data)
+    latest_row = data.sort_values("year").iloc[-1]
+
+    previous_gdp_growth = float(latest_row["gdp_growth"])
+    previous_inflation = float(latest_row["inflation_rate"])
+    previous_unemployment = float(latest_row["unemployment_rate"])
+    previous_interest_rate = float(latest_row["interest_rate"])
+    latest_year = int(latest_row["year"])
+
+    potential_growth = baseline["potential_growth"]
+    target_inflation = baseline["target_inflation"]
+    normal_unemployment = baseline["normal_unemployment"]
+    neutral_interest_rate = baseline["neutral_interest_rate"]
+
+    results = []
+
+    for step in range(1, years + 1):
+        year = latest_year + step
+        shock_decay = 0.65 ** (step - 1)
+
+        current_demand_shock = demand_shock * shock_decay
+        current_supply_shock = supply_shock * shock_decay
+        current_policy_shock = policy_shock * shock_decay
+
+        interest_rate = (
+            neutral_interest_rate
+            + 0.45 * (previous_inflation - target_inflation)
+            + 0.20 * (previous_gdp_growth - potential_growth)
+            + current_policy_shock
+        )
+        interest_rate = max(0.0, interest_rate)
+
+        gdp_growth = (
+            0.55 * previous_gdp_growth
+            + 0.45 * potential_growth
+            + current_demand_shock
+            - 0.20 * max(interest_rate - neutral_interest_rate, 0)
+            - 0.25 * current_supply_shock
+        )
+
+        inflation_rate = (
+            0.60 * previous_inflation
+            + 0.40 * target_inflation
+            + 0.30 * max(gdp_growth - potential_growth, 0)
+            + 0.55 * current_supply_shock
+            - 0.15 * max(interest_rate - neutral_interest_rate, 0)
+        )
+
+        unemployment_rate = (
+            0.70 * previous_unemployment
+            + 0.30 * normal_unemployment
+            - 0.35 * (gdp_growth - potential_growth)
+        )
+        unemployment_rate = max(0.0, unemployment_rate)
+
+        results.append({
+            "scenario": scenario_name,
+            "year": year,
+            "gdp_growth": round(gdp_growth, 2),
+            "inflation_rate": round(inflation_rate, 2),
+            "unemployment_rate": round(unemployment_rate, 2),
+            "interest_rate": round(interest_rate, 2),
+        })
+
+        previous_gdp_growth = gdp_growth
+        previous_inflation = inflation_rate
+        previous_unemployment = unemployment_rate
+        previous_interest_rate = interest_rate
+
+    return pd.DataFrame(results)
+
+
+def build_default_macro_scenarios(data, years=5):
+    """
+    Build a set of default macroeconomic scenarios.
+    """
+    return {
+        "baseline": simulate_macro_scenario(
+            data,
+            scenario_name="baseline",
+            years=years,
+        ),
+        "inflation_shock": simulate_macro_scenario(
+            data,
+            scenario_name="inflation_shock",
+            years=years,
+            supply_shock=2.0,
+        ),
+        "recession_shock": simulate_macro_scenario(
+            data,
+            scenario_name="recession_shock",
+            years=years,
+            demand_shock=-2.0,
+        ),
+        "tight_policy": simulate_macro_scenario(
+            data,
+            scenario_name="tight_policy",
+            years=years,
+            policy_shock=1.5,
+        ),
+    }
+
+
+def compare_macro_scenarios(scenarios):
+    """
+    Compare final-year outcomes across macroeconomic scenarios.
+    """
+    rows = []
+
+    for scenario_name, scenario_data in scenarios.items():
+        final_row = scenario_data.sort_values("year").iloc[-1]
+        risk_analysis = analyze_macro_risk(scenario_data)
+
+        rows.append({
+            "scenario": scenario_name,
+            "final_year": int(final_row["year"]),
+            "final_gdp_growth": float(final_row["gdp_growth"]),
+            "final_inflation_rate": float(final_row["inflation_rate"]),
+            "final_unemployment_rate": float(final_row["unemployment_rate"]),
+            "final_interest_rate": float(final_row["interest_rate"]),
+            "overall_risk": risk_analysis["overall_risk"],
+            "risk_score": risk_analysis["risk_score"],
+        })
+
+    return pd.DataFrame(rows)
+
+
+def generate_macro_scenario_report(scenarios, output_path):
+    """
+    Generate a Markdown report comparing macroeconomic scenarios.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    comparison = compare_macro_scenarios(scenarios)
+
+    lines = []
+    lines.append("# Macro Scenario Analysis Report")
+    lines.append("")
+    lines.append("This report was automatically generated with EconKit.")
+    lines.append("")
+    lines.append("## Scenario comparison")
+    lines.append("")
+    lines.append(comparison.to_markdown(index=False))
+    lines.append("")
+    lines.append("## Scenario descriptions")
+    lines.append("")
+    lines.append("- `baseline`: continuation of recent macroeconomic conditions")
+    lines.append("- `inflation_shock`: higher inflation caused by a supply-side shock")
+    lines.append("- `recession_shock`: weaker growth caused by a negative demand shock")
+    lines.append("- `tight_policy`: higher interest rates caused by a monetary policy shock")
+    lines.append("")
+    lines.append("## Interpretation guide")
+    lines.append("")
+    lines.append(
+        "Students can compare scenarios to understand how macroeconomic shocks may affect "
+        "growth, inflation, unemployment, interest rates, and overall macro risk."
+    )
+    lines.append("")
+    lines.append("## Educational note")
+    lines.append("")
+    lines.append(
+        "This scenario simulator uses simple educational rules. "
+        "It is not intended to be a professional forecasting model."
+    )
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+    return output_path
+
+
+def generate_macro_scenario_analysis(data_path, output_dir, years=5):
+    """
+    Generate scenario CSV files, comparison data, and a Markdown scenario report.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    data = load_economic_data(data_path)
+    scenarios = build_default_macro_scenarios(data, years=years)
+
+    scenario_paths = {}
+
+    for scenario_name, scenario_data in scenarios.items():
+        scenario_path = output_dir / f"{scenario_name}_scenario.csv"
+        scenario_data.to_csv(scenario_path, index=False)
+        scenario_paths[scenario_name] = scenario_path
+
+    comparison = compare_macro_scenarios(scenarios)
+    comparison_path = output_dir / "scenario_comparison.csv"
+    comparison.to_csv(comparison_path, index=False)
+
+    report_path = output_dir / "macro_scenario_report.md"
+    generate_macro_scenario_report(scenarios, report_path)
+
+    return {
+        "scenario_paths": scenario_paths,
+        "comparison_path": comparison_path,
+        "report_path": report_path,
+    }
