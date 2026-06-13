@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "econkit"
 version = "1.0.0"
-description = "Beginner-friendly Python toolkit for economics data analysis, reporting, macro risk analysis, and scenario simulation."
+description = "Beginner-friendly Python toolkit for economics data analysis, reporting, policy analysis, and scenario simulation."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.scripts]
-econkit = "econkit_cli:run_cli"
+econkit = "econkit_cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -41,3 +41,4 @@ py-modules = ["econkit", "econkit_cli"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
