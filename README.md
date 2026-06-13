@@ -129,3 +129,20 @@ Please read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) file before participati
 A beginner-friendly tutorial is available here:
 
 [docs/tutorial.md](docs/tutorial.md)
+
+## Report generator
+
+EconKit includes a simple report generator for macroeconomic datasets.
+
+The report generator can:
+
+- Load economic data from CSV
+- Calculate summary statistics
+- Find highest and lowest values by year
+- Create line charts for key indicators
+- Generate a Markdown economic analysis report
+
+Run the report generator with:
+
+```bash
+python examples/generate_report.py
