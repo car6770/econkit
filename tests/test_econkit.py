@@ -8,11 +8,15 @@ sys.path.insert(0, str(project_root / "src"))
 
 from econkit import (
     analyze_macro_risk,
+    build_default_macro_scenarios,
     calculate_average_growth,
     calculate_correlation_matrix,
     calculate_summary_statistics,
+    compare_macro_scenarios,
     find_highest_value_year,
     find_lowest_value_year,
+    generate_macro_scenario_analysis,
+    simulate_macro_scenario,
 )
 
 
@@ -127,3 +131,87 @@ def test_analyze_macro_risk_raises_error_for_missing_columns():
         assert False
     except ValueError as error:
         assert "Missing required columns" in str(error)
+
+
+def test_simulate_macro_scenario_returns_future_rows():
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    scenario = simulate_macro_scenario(
+        data,
+        scenario_name="baseline",
+        years=3,
+    )
+
+    assert len(scenario) == 3
+    assert scenario["year"].tolist() == [2025, 2026, 2027]
+    assert "gdp_growth" in scenario.columns
+    assert "inflation_rate" in scenario.columns
+    assert "unemployment_rate" in scenario.columns
+    assert "interest_rate" in scenario.columns
+
+
+def test_build_default_macro_scenarios_creates_expected_scenarios():
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    scenarios = build_default_macro_scenarios(data, years=2)
+
+    assert set(scenarios.keys()) == {
+        "baseline",
+        "inflation_shock",
+        "recession_shock",
+        "tight_policy",
+    }
+    assert len(scenarios["baseline"]) == 2
+
+
+def test_compare_macro_scenarios_returns_comparison_table():
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    scenarios = build_default_macro_scenarios(data, years=2)
+    comparison = compare_macro_scenarios(scenarios)
+
+    assert len(comparison) == 4
+    assert "scenario" in comparison.columns
+    assert "overall_risk" in comparison.columns
+    assert "risk_score" in comparison.columns
+
+
+def test_generate_macro_scenario_analysis_creates_files(tmp_path):
+    data = pd.DataFrame({
+        "year": [2022, 2023, 2024],
+        "gdp_growth": [2.6, 1.4, 2.0],
+        "inflation_rate": [5.1, 3.6, 2.3],
+        "unemployment_rate": [3.0, 2.7, 2.8],
+        "interest_rate": [3.25, 3.50, 3.50]
+    })
+
+    data_path = tmp_path / "sample.csv"
+    data.to_csv(data_path, index=False)
+
+    results = generate_macro_scenario_analysis(
+        data_path=data_path,
+        output_dir=tmp_path / "outputs",
+        years=2,
+    )
+
+    assert results["comparison_path"].exists()
+    assert results["report_path"].exists()
+    assert len(results["scenario_paths"]) == 4
