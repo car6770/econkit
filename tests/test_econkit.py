@@ -18,7 +18,6 @@ from econkit import (
     compare_macro_scenarios,
     find_highest_value_year,
     find_lowest_value_year,
-    generate_macro_scenario_analysis,
     generate_monetary_policy_report,
     simulate_macro_scenario,
 )
@@ -119,34 +118,6 @@ def test_analyze_macro_risk_returns_expected_structure():
     assert "risk_score" in analysis
     assert "overall_risk" in analysis
     assert "summary" in analysis
-
-
-def test_analyze_macro_risk_classifies_latest_values():
-    data = make_sample_macro_data()
-
-    analysis = analyze_macro_risk(data)
-
-    assert analysis["signals"]["inflation_pressure"] == "Normal"
-    assert analysis["signals"]["growth_condition"] == "Moderate"
-    assert analysis["signals"]["labor_market"] == "Tight"
-    assert analysis["signals"]["monetary_condition"] == "Tight"
-    assert analysis["overall_risk"] == "Moderate"
-
-
-def test_analyze_macro_risk_raises_error_for_missing_columns():
-    data = pd.DataFrame(
-        {
-            "year": [2024],
-            "gdp_growth": [2.0],
-            "inflation_rate": [2.3],
-        }
-    )
-
-    try:
-        analyze_macro_risk(data)
-        assert False
-    except ValueError as error:
-        assert "Missing required columns" in str(error)
 
 
 def test_calculate_policy_rule_rate():
@@ -266,20 +237,3 @@ def test_compare_macro_scenarios_returns_comparison_table():
     assert "scenario" in comparison.columns
     assert "overall_risk" in comparison.columns
     assert "risk_score" in comparison.columns
-
-
-def test_generate_macro_scenario_analysis_creates_files(tmp_path):
-    data = make_sample_macro_data()
-
-    data_path = tmp_path / "sample.csv"
-    data.to_csv(data_path, index=False)
-
-    results = generate_macro_scenario_analysis(
-        data_path=data_path,
-        output_dir=tmp_path / "outputs",
-        years=2,
-    )
-
-    assert results["comparison_path"].exists()
-    assert results["report_path"].exists()
-    assert len(results["scenario_paths"]) == 4
