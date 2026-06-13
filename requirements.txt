@@ -1,4 +1,17 @@
-pandas
-matplotlib
-pytest
-tabulate
+# EconKit core dependencies
+#
+# These packages are enough to run EconKit's main analysis, CLI, reports,
+# charts, tests, and GitHub Actions workflow.
+
+numpy>=1.23
+pandas>=1.5
+matplotlib>=3.6
+tabulate>=0.9
+
+# Development / testing
+pytest>=7.0
+
+# Optional file-format support
+# Uncomment these if you want Excel or Parquet support locally.
+# openpyxl>=3.1
+# pyarrow>=12.0
