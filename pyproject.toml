@@ -4,41 +4,109 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "econkit"
-version = "1.0.0"
-description = "Beginner-friendly Python toolkit for economics data analysis, reporting, policy analysis, and scenario simulation."
+version = "1.1.0"
+description = "A Python toolkit for economics data analysis, macro diagnostics, scenario simulation, forecasting, lightweight econometrics, and automated reporting."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
+    { name = "Gyujin Lee" }
+]
+maintainers = [
     { name = "Gyujin Lee" }
 ]
 keywords = [
     "economics",
     "macroeconomics",
     "data-analysis",
+    "econometrics",
+    "forecasting",
+    "scenario-analysis",
+    "monetary-policy",
+    "business-cycle",
     "education",
-    "python",
     "pandas",
     "matplotlib"
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Office/Business :: Financial",
+]
 dependencies = [
-    "pandas",
-    "matplotlib",
-    "tabulate"
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "matplotlib>=3.6",
+    "tabulate>=0.9",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest"
+    "pytest>=7.0",
+    "ruff>=0.4",
 ]
+excel = [
+    "openpyxl>=3.1",
+]
+parquet = [
+    "pyarrow>=12.0",
+]
+all = [
+    "pytest>=7.0",
+    "ruff>=0.4",
+    "openpyxl>=3.1",
+    "pyarrow>=12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/car6770/econkit"
+Repository = "https://github.com/car6770/econkit"
+Issues = "https://github.com/car6770/econkit/issues"
 
 [project.scripts]
 econkit = "econkit_cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "src" }
-py-modules = ["econkit", "econkit_cli"]
+py-modules = [
+    "econkit",
+    "econkit_cli",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+]
+ignore = [
+    "E501",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
