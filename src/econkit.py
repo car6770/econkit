@@ -238,3 +238,204 @@ def generate_economic_report(data_path, output_dir):
     generate_markdown_report(data, indicators, report_path)
 
     return report_path
+
+def _is_missing(value):
+    """
+    Check whether a value is missing.
+    """
+    return value is None or value != value
+
+
+def classify_inflation_pressure(inflation_rate):
+    """
+    Classify inflation pressure based on the latest inflation rate.
+    """
+    if _is_missing(inflation_rate):
+        return "Unknown"
+
+    if inflation_rate >= 4.0:
+        return "High"
+    if inflation_rate >= 2.5:
+        return "Elevated"
+    if inflation_rate < 1.0:
+        return "Low"
+    return "Normal"
+
+
+def classify_growth_condition(gdp_growth):
+    """
+    Classify economic growth condition based on GDP growth.
+    """
+    if _is_missing(gdp_growth):
+        return "Unknown"
+
+    if gdp_growth < 0:
+        return "Contraction"
+    if gdp_growth < 1.5:
+        return "Weak"
+    if gdp_growth <= 3.0:
+        return "Moderate"
+    return "Strong"
+
+
+def classify_labor_market(unemployment_rate):
+    """
+    Classify labor market condition based on unemployment rate.
+    """
+    if _is_missing(unemployment_rate):
+        return "Unknown"
+
+    if unemployment_rate < 3.0:
+        return "Tight"
+    if unemployment_rate <= 4.0:
+        return "Stable"
+    if unemployment_rate <= 5.0:
+        return "Soft"
+    return "Weak"
+
+
+def classify_monetary_condition(interest_rate):
+    """
+    Classify monetary condition based on the interest rate.
+    """
+    if _is_missing(interest_rate):
+        return "Unknown"
+
+    if interest_rate >= 3.0:
+        return "Tight"
+    if interest_rate >= 1.5:
+        return "Neutral"
+    return "Accommodative"
+
+
+def calculate_macro_risk_score(signals):
+    """
+    Calculate a simple macroeconomic risk score from classified signals.
+    """
+    score = 0
+
+    if signals["inflation_pressure"] == "High":
+        score += 2
+    elif signals["inflation_pressure"] == "Elevated":
+        score += 1
+
+    if signals["growth_condition"] == "Contraction":
+        score += 2
+    elif signals["growth_condition"] == "Weak":
+        score += 1
+
+    if signals["labor_market"] == "Weak":
+        score += 2
+    elif signals["labor_market"] == "Soft":
+        score += 1
+
+    if signals["monetary_condition"] == "Tight":
+        score += 1
+
+    return score
+
+
+def classify_overall_macro_risk(score):
+    """
+    Classify the overall macroeconomic risk level.
+    """
+    if score >= 5:
+        return "High"
+    if score >= 3:
+        return "Elevated"
+    if score >= 1:
+        return "Moderate"
+    return "Low"
+
+
+def generate_macro_risk_summary(analysis):
+    """
+    Generate a beginner-friendly written summary of macroeconomic conditions.
+    """
+    year = analysis["latest_year"]
+    signals = analysis["signals"]
+    overall_risk = analysis["overall_risk"]
+
+    summary = []
+
+    summary.append(
+        f"In {year}, the overall macroeconomic risk level is classified as {overall_risk}."
+    )
+
+    summary.append(
+        f"Inflation pressure is {signals['inflation_pressure'].lower()}, "
+        f"while growth conditions are {signals['growth_condition'].lower()}."
+    )
+
+    summary.append(
+        f"The labor market is classified as {signals['labor_market'].lower()}, "
+        f"and monetary conditions are {signals['monetary_condition'].lower()}."
+    )
+
+    summary.append(
+        "This classification is based on simple educational thresholds and should be interpreted as a beginner-friendly macroeconomic screening tool, not as a formal forecast."
+    )
+
+    return " ".join(summary)
+
+
+def analyze_macro_risk(data):
+    """
+    Analyze macroeconomic risk using the latest observation in the dataset.
+
+    Required columns:
+    - year
+    - gdp_growth
+    - inflation_rate
+    - unemployment_rate
+    - interest_rate
+    """
+    required_columns = [
+        "year",
+        "gdp_growth",
+        "inflation_rate",
+        "unemployment_rate",
+        "interest_rate",
+    ]
+
+    missing_columns = [column for column in required_columns if column not in data.columns]
+
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    latest_row = data.sort_values("year").iloc[-1]
+
+    signals = {
+        "inflation_pressure": classify_inflation_pressure(
+            latest_row["inflation_rate"]
+        ),
+        "growth_condition": classify_growth_condition(
+            latest_row["gdp_growth"]
+        ),
+        "labor_market": classify_labor_market(
+            latest_row["unemployment_rate"]
+        ),
+        "monetary_condition": classify_monetary_condition(
+            latest_row["interest_rate"]
+        ),
+    }
+
+    risk_score = calculate_macro_risk_score(signals)
+    overall_risk = classify_overall_macro_risk(risk_score)
+
+    analysis = {
+        "latest_year": int(latest_row["year"]),
+        "latest_values": {
+            "gdp_growth": float(latest_row["gdp_growth"]),
+            "inflation_rate": float(latest_row["inflation_rate"]),
+            "unemployment_rate": float(latest_row["unemployment_rate"]),
+            "interest_rate": float(latest_row["interest_rate"]),
+        },
+        "signals": signals,
+        "risk_score": risk_score,
+        "overall_risk": overall_risk,
+    }
+
+    analysis["summary"] = generate_macro_risk_summary(analysis)
+
+    return analysis
