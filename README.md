@@ -123,3 +123,9 @@ Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to
 This project follows a simple code of conduct to keep the community respectful and beginner-friendly.
 
 Please read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) file before participating in discussions or contributions.
+
+## Tutorial
+
+A beginner-friendly tutorial is available here:
+
+[docs/tutorial.md](docs/tutorial.md)
