@@ -1,203 +1,79 @@
+"""Command-line interface for EconKit."""
+
+from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
 
 from econkit import (
+    analyze_business_cycle,
     analyze_macro_risk,
     analyze_monetary_policy_stance,
     generate_economic_report,
     generate_macro_scenario_analysis,
     load_economic_data,
+    validate_macro_dataset,
 )
 
 
-REQUIRED_COLUMNS = [
-    "year",
-    "gdp_growth",
-    "inflation_rate",
-    "unemployment_rate",
-    "interest_rate",
-]
+def _write_json(data: dict, output_path: Path) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return output_path
 
 
-def validate_dataset(data):
-    """
-    Validate that the dataset includes the required macroeconomic columns.
-    """
-    missing_columns = [column for column in REQUIRED_COLUMNS if column not in data.columns]
+def _write_markdown(title: str, analysis: dict, summary_key: str, output_path: Path) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"# {title}", "", "This file was automatically generated with EconKit.", ""]
 
-    if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
+    for key, value in analysis.items():
+        if isinstance(value, dict):
+            lines.append(f"## {key.replace('_', ' ').title()}")
+            lines.append("")
+            for child_key, child_value in value.items():
+                lines.append(f"- {child_key.replace('_', ' ').title()}: {child_value}")
+            lines.append("")
+        elif key != summary_key:
+            lines.append(f"- {key.replace('_', ' ').title()}: {value}")
 
-    if data.empty:
-        raise ValueError("Dataset is empty.")
+    if summary_key in analysis:
+        lines.extend(["", "## Summary", "", analysis[summary_key]])
 
-    return True
-
-
-def save_macro_risk_summary(analysis, output_dir):
-    """
-    Save macro risk analysis results as a Markdown file.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_dir / "macro_risk_summary.md"
-
-    lines = []
-    lines.append("# Macro Risk Summary")
-    lines.append("")
-    lines.append(f"- Latest year: {analysis['latest_year']}")
-    lines.append(f"- Risk score: {analysis['risk_score']}")
-    lines.append(f"- Overall risk: {analysis['overall_risk']}")
-    lines.append("")
-    lines.append("## Signals")
-    lines.append("")
-
-    for signal_name, signal_value in analysis["signals"].items():
-        readable_name = signal_name.replace("_", " ").title()
-        lines.append(f"- {readable_name}: {signal_value}")
-
-    lines.append("")
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(analysis["summary"])
-    lines.append("")
-    lines.append("## Note")
-    lines.append("")
-    lines.append(
-        "This analysis is intended for educational use and should not be interpreted "
-        "as a formal forecast or professional economic assessment."
+    lines.extend(
+        [
+            "",
+            "## Educational note",
+            "",
+            "This output is for educational analysis and should not be interpreted as professional forecasting or official policy advice.",
+        ]
     )
-
     output_path.write_text("\n".join(lines), encoding="utf-8")
-
     return output_path
 
 
-def save_macro_risk_json(analysis, output_dir):
-    """
-    Save macro risk analysis results as a JSON file.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_dir / "macro_risk_summary.json"
-
-    output_path.write_text(
-        json.dumps(analysis, indent=2),
-        encoding="utf-8",
-    )
-
-    return output_path
-
-
-def save_monetary_policy_summary(analysis, output_dir):
-    """
-    Save monetary policy stance analysis results as a Markdown file.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_dir / "monetary_policy_summary.md"
-
-    lines = []
-    lines.append("# Monetary Policy Stance Summary")
-    lines.append("")
-    lines.append(f"- Latest year: {analysis['latest_year']}")
-    lines.append(f"- Policy stance: {analysis['policy_stance']}")
-    lines.append(f"- Actual interest rate: {analysis['actual_interest_rate']:.2f}")
-    lines.append(
-        f"- Recommended policy-rule rate: "
-        f"{analysis['recommended_policy_rate']:.2f}"
-    )
-    lines.append(f"- Policy gap: {analysis['policy_gap']:.2f}")
-    lines.append("")
-    lines.append("## Inputs")
-    lines.append("")
-
-    for input_name, input_value in analysis["inputs"].items():
-        readable_name = input_name.replace("_", " ").title()
-        lines.append(f"- {readable_name}: {input_value:.2f}")
-
-    lines.append("")
-    lines.append("## Economic gaps")
-    lines.append("")
-
-    for gap_name, gap_value in analysis["gaps"].items():
-        readable_name = gap_name.replace("_", " ").title()
-        lines.append(f"- {readable_name}: {gap_value:.2f}")
-
-    lines.append("")
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(analysis["summary"])
-    lines.append("")
-    lines.append("## Note")
-    lines.append("")
-    lines.append(
-        "This monetary policy analysis is a simplified educational tool. "
-        "It should not be interpreted as an official policy recommendation."
-    )
-
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
-    return output_path
-
-
-def save_monetary_policy_json(analysis, output_dir):
-    """
-    Save monetary policy stance analysis results as a JSON file.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_dir / "monetary_policy_summary.json"
-
-    output_path.write_text(
-        json.dumps(analysis, indent=2),
-        encoding="utf-8",
-    )
-
-    return output_path
-
-
-def command_validate(args):
-    """
-    Validate an economic dataset.
-    """
+def command_validate(args: argparse.Namespace) -> None:
     data = load_economic_data(args.data_path)
-    validate_dataset(data)
-
+    validate_macro_dataset(data)
     print("Dataset validation passed.")
     print(f"Rows: {len(data)}")
     print(f"Columns: {', '.join(data.columns)}")
 
 
-def command_report(args):
-    """
-    Generate an economic report and charts.
-    """
-    data = load_economic_data(args.data_path)
-    validate_dataset(data)
-
+def command_report(args: argparse.Namespace) -> None:
     report_path = generate_economic_report(args.data_path, args.output_dir)
-
     print("Economic report generated successfully.")
     print(f"Report saved to: {report_path}")
 
 
-def command_risk(args):
-    """
-    Generate macro risk analysis outputs.
-    """
+def command_risk(args: argparse.Namespace) -> None:
     data = load_economic_data(args.data_path)
-    validate_dataset(data)
-
+    validate_macro_dataset(data)
     analysis = analyze_macro_risk(data)
+    output_dir = Path(args.output_dir)
 
-    markdown_path = save_macro_risk_summary(analysis, args.output_dir)
-    json_path = save_macro_risk_json(analysis, args.output_dir)
+    markdown_path = _write_markdown("Macro Risk Summary", analysis, "summary", output_dir / "macro_risk_summary.md")
+    json_path = _write_json(analysis, output_dir / "macro_risk_summary.json")
 
     print("Macro risk analysis completed.")
     print(f"Markdown summary saved to: {markdown_path}")
@@ -205,242 +81,171 @@ def command_risk(args):
     print(f"Overall macro risk: {analysis['overall_risk']}")
 
 
-def command_policy(args):
-    """
-    Generate monetary policy stance analysis outputs.
-    """
+def command_policy(args: argparse.Namespace) -> None:
     data = load_economic_data(args.data_path)
-    validate_dataset(data)
-
+    validate_macro_dataset(data)
     analysis = analyze_monetary_policy_stance(
         data,
         target_inflation=args.target_inflation,
         neutral_interest_rate=args.neutral_interest_rate,
         potential_growth=args.potential_growth,
+        inflation_weight=args.inflation_weight,
+        growth_weight=args.growth_weight,
     )
+    output_dir = Path(args.output_dir)
 
-    markdown_path = save_monetary_policy_summary(analysis, args.output_dir)
-    json_path = save_monetary_policy_json(analysis, args.output_dir)
+    markdown_path = _write_markdown(
+        "Monetary Policy Stance Summary",
+        analysis,
+        "summary",
+        output_dir / "monetary_policy_summary.md",
+    )
+    json_path = _write_json(analysis, output_dir / "monetary_policy_summary.json")
 
     print("Monetary policy stance analysis completed.")
     print(f"Markdown summary saved to: {markdown_path}")
     print(f"JSON summary saved to: {json_path}")
     print(f"Policy stance: {analysis['policy_stance']}")
-    print(f"Actual interest rate: {analysis['actual_interest_rate']:.2f}")
-    print(f"Recommended policy-rule rate: {analysis['recommended_policy_rate']:.2f}")
     print(f"Policy gap: {analysis['policy_gap']:.2f}")
 
 
-def command_scenarios(args):
-    """
-    Generate macro scenario simulation outputs.
-    """
+def command_cycle(args: argparse.Namespace) -> None:
     data = load_economic_data(args.data_path)
-    validate_dataset(data)
+    validate_macro_dataset(data)
+    analysis = analyze_business_cycle(data)
+    output_dir = Path(args.output_dir)
 
+    markdown_path = _write_markdown(
+        "Business Cycle Diagnosis",
+        analysis,
+        "summary",
+        output_dir / "business_cycle_summary.md",
+    )
+    json_path = _write_json(analysis, output_dir / "business_cycle_summary.json")
+
+    print("Business cycle diagnosis completed.")
+    print(f"Markdown summary saved to: {markdown_path}")
+    print(f"JSON summary saved to: {json_path}")
+    print(f"Business-cycle phase: {analysis['business_cycle_phase']}")
+
+
+def command_scenarios(args: argparse.Namespace) -> None:
     results = generate_macro_scenario_analysis(
         data_path=args.data_path,
         output_dir=args.output_dir,
         years=args.years,
     )
-
     print("Macro scenario analysis completed.")
     print(f"Scenario comparison saved to: {results['comparison_path']}")
     print(f"Scenario report saved to: {results['report_path']}")
     print("Generated scenario files:")
-
     for scenario_name, scenario_path in results["scenario_paths"].items():
         print(f"- {scenario_name}: {scenario_path}")
 
 
-def command_all(args):
-    """
-    Run the full EconKit analysis pipeline.
-    """
+def command_all(args: argparse.Namespace) -> None:
     data = load_economic_data(args.data_path)
-    validate_dataset(data)
+    validate_macro_dataset(data)
 
     output_dir = Path(args.output_dir)
-
-    report_dir = output_dir / "report"
-    risk_dir = output_dir / "risk"
-    policy_dir = output_dir / "policy"
-    scenario_dir = output_dir / "scenarios"
-
-    report_path = generate_economic_report(args.data_path, report_dir)
+    report_path = generate_economic_report(args.data_path, output_dir / "report")
 
     risk_analysis = analyze_macro_risk(data)
-    risk_markdown_path = save_macro_risk_summary(risk_analysis, risk_dir)
-    risk_json_path = save_macro_risk_json(risk_analysis, risk_dir)
+    _write_markdown("Macro Risk Summary", risk_analysis, "summary", output_dir / "risk" / "macro_risk_summary.md")
+    _write_json(risk_analysis, output_dir / "risk" / "macro_risk_summary.json")
 
     policy_analysis = analyze_monetary_policy_stance(data)
-    policy_markdown_path = save_monetary_policy_summary(
+    _write_markdown(
+        "Monetary Policy Stance Summary",
         policy_analysis,
-        policy_dir,
+        "summary",
+        output_dir / "policy" / "monetary_policy_summary.md",
     )
-    policy_json_path = save_monetary_policy_json(
-        policy_analysis,
-        policy_dir,
+    _write_json(policy_analysis, output_dir / "policy" / "monetary_policy_summary.json")
+
+    cycle_analysis = analyze_business_cycle(data)
+    _write_markdown(
+        "Business Cycle Diagnosis",
+        cycle_analysis,
+        "summary",
+        output_dir / "cycle" / "business_cycle_summary.md",
     )
+    _write_json(cycle_analysis, output_dir / "cycle" / "business_cycle_summary.json")
 
     scenario_results = generate_macro_scenario_analysis(
         data_path=args.data_path,
-        output_dir=scenario_dir,
+        output_dir=output_dir / "scenarios",
         years=args.years,
     )
 
     print("EconKit full analysis completed.")
-    print("")
-    print("Generated outputs:")
-    print(f"- Economic report: {report_path}")
-    print(f"- Macro risk Markdown summary: {risk_markdown_path}")
-    print(f"- Macro risk JSON summary: {risk_json_path}")
-    print(f"- Monetary policy Markdown summary: {policy_markdown_path}")
-    print(f"- Monetary policy JSON summary: {policy_json_path}")
-    print(f"- Scenario comparison: {scenario_results['comparison_path']}")
-    print(f"- Scenario report: {scenario_results['report_path']}")
-    print("")
+    print(f"Economic report: {report_path}")
+    print(f"Scenario report: {scenario_results['report_path']}")
     print(f"Overall macro risk: {risk_analysis['overall_risk']}")
     print(f"Policy stance: {policy_analysis['policy_stance']}")
-    print(f"Macro summary: {risk_analysis['summary']}")
-    print(f"Policy summary: {policy_analysis['summary']}")
+    print(f"Business-cycle phase: {cycle_analysis['business_cycle_phase']}")
 
 
-def build_parser():
-    """
-    Build the EconKit command-line parser.
-    """
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "EconKit: beginner-friendly economics data analysis, reporting, "
-            "macro risk analysis, monetary policy analysis, and scenario simulation."
+            "EconKit: beginner-friendly economics data analysis, reporting, macro risk, "
+            "monetary policy stance, business-cycle diagnosis, and scenario simulation."
         )
     )
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers = parser.add_subparsers(
-        dest="command",
-        required=True,
-    )
-
-    validate_parser = subparsers.add_parser(
-        "validate",
-        help="Validate an economic CSV dataset.",
-    )
+    validate_parser = subparsers.add_parser("validate", help="Validate an economic CSV dataset.")
     validate_parser.add_argument("data_path")
     validate_parser.set_defaults(func=command_validate)
 
-    report_parser = subparsers.add_parser(
-        "report",
-        help="Generate an economic report and charts.",
-    )
+    report_parser = subparsers.add_parser("report", help="Generate an economic report and charts.")
     report_parser.add_argument("data_path")
-    report_parser.add_argument(
-        "--output-dir",
-        default="outputs/report",
-        help="Directory where report outputs will be saved.",
-    )
+    report_parser.add_argument("--output-dir", default="outputs/report")
     report_parser.set_defaults(func=command_report)
 
-    risk_parser = subparsers.add_parser(
-        "risk",
-        help="Generate macro risk analysis outputs.",
-    )
+    risk_parser = subparsers.add_parser("risk", help="Analyze macroeconomic risk.")
     risk_parser.add_argument("data_path")
-    risk_parser.add_argument(
-        "--output-dir",
-        default="outputs/risk",
-        help="Directory where risk outputs will be saved.",
-    )
+    risk_parser.add_argument("--output-dir", default="outputs/risk")
     risk_parser.set_defaults(func=command_risk)
 
-    policy_parser = subparsers.add_parser(
-        "policy",
-        help="Analyze monetary policy stance.",
-    )
+    policy_parser = subparsers.add_parser("policy", help="Analyze monetary policy stance.")
     policy_parser.add_argument("data_path")
-    policy_parser.add_argument(
-        "--output-dir",
-        default="outputs/policy",
-        help="Directory where monetary policy outputs will be saved.",
-    )
-    policy_parser.add_argument(
-        "--target-inflation",
-        type=float,
-        default=2.0,
-        help="Inflation target used in the simple policy rule.",
-    )
-    policy_parser.add_argument(
-        "--neutral-interest-rate",
-        type=float,
-        default=None,
-        help=(
-            "Neutral interest rate used in the simple policy rule. "
-            "If omitted, EconKit uses a recent historical average."
-        ),
-    )
-    policy_parser.add_argument(
-        "--potential-growth",
-        type=float,
-        default=None,
-        help=(
-            "Potential growth rate used in the simple policy rule. "
-            "If omitted, EconKit uses a recent historical average."
-        ),
-    )
+    policy_parser.add_argument("--output-dir", default="outputs/policy")
+    policy_parser.add_argument("--target-inflation", type=float, default=2.0)
+    policy_parser.add_argument("--neutral-interest-rate", type=float, default=None)
+    policy_parser.add_argument("--potential-growth", type=float, default=None)
+    policy_parser.add_argument("--inflation-weight", type=float, default=0.5)
+    policy_parser.add_argument("--growth-weight", type=float, default=0.5)
     policy_parser.set_defaults(func=command_policy)
 
-    scenarios_parser = subparsers.add_parser(
-        "scenarios",
-        help="Generate macroeconomic scenario simulation outputs.",
-    )
+    cycle_parser = subparsers.add_parser("cycle", help="Diagnose the business-cycle phase.")
+    cycle_parser.add_argument("data_path")
+    cycle_parser.add_argument("--output-dir", default="outputs/cycle")
+    cycle_parser.set_defaults(func=command_cycle)
+
+    scenarios_parser = subparsers.add_parser("scenarios", help="Generate macroeconomic scenario simulations.")
     scenarios_parser.add_argument("data_path")
-    scenarios_parser.add_argument(
-        "--output-dir",
-        default="outputs/scenarios",
-        help="Directory where scenario outputs will be saved.",
-    )
-    scenarios_parser.add_argument(
-        "--years",
-        type=int,
-        default=5,
-        help="Number of future years to simulate.",
-    )
+    scenarios_parser.add_argument("--output-dir", default="outputs/scenarios")
+    scenarios_parser.add_argument("--years", type=int, default=5)
     scenarios_parser.set_defaults(func=command_scenarios)
 
-    all_parser = subparsers.add_parser(
-        "all",
-        help="Run the full EconKit analysis pipeline.",
-    )
+    all_parser = subparsers.add_parser("all", help="Run the full EconKit analysis pipeline.")
     all_parser.add_argument("data_path")
-    all_parser.add_argument(
-        "--output-dir",
-        default="outputs",
-        help="Directory where all outputs will be saved.",
-    )
-    all_parser.add_argument(
-        "--years",
-        type=int,
-        default=5,
-        help="Number of future years to simulate.",
-    )
+    all_parser.add_argument("--output-dir", default="outputs")
+    all_parser.add_argument("--years", type=int, default=5)
     all_parser.set_defaults(func=command_all)
 
     return parser
 
 
-def main(argv=None):
-    """
-    Run the EconKit command-line interface.
-    """
+def main(argv=None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     args.func(args)
 
 
-def run_cli():
-    """
-    Backward-compatible CLI entry point.
-    """
+def run_cli() -> None:
     main()
 
 

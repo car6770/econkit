@@ -1,7 +1,21 @@
-from pathlib import Path
+"""EconKit: beginner-friendly economics data analysis toolkit.
 
-import pandas as pd
+EconKit helps students and early researchers move from a macroeconomic CSV
+file to summary statistics, charts, macro risk screening, monetary policy
+stance analysis, simple scenario simulations, and Markdown reports.
+
+The models in this file are educational rules of thumb. They are not official
+forecasts, policy recommendations, or professional investment advice.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Dict, Iterable, Mapping, Optional
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 REQUIRED_MACRO_COLUMNS = [
@@ -12,132 +26,78 @@ REQUIRED_MACRO_COLUMNS = [
     "interest_rate",
 ]
 
+DEFAULT_INDICATORS = [
+    "gdp_growth",
+    "inflation_rate",
+    "unemployment_rate",
+    "interest_rate",
+]
 
-def load_economic_data(file_path):
-    """
-    Load an economic dataset from a CSV file.
 
-    Parameters
-    ----------
-    file_path : str
-        Path to the CSV file.
+# ---------------------------------------------------------------------------
+# Data loading and validation
+# ---------------------------------------------------------------------------
 
-    Returns
-    -------
-    pandas.DataFrame
-        Loaded economic dataset.
-    """
+
+def load_economic_data(file_path: str | Path) -> pd.DataFrame:
+    """Load an economic dataset from a CSV file."""
     return pd.read_csv(file_path)
 
 
-def calculate_summary_statistics(data):
-    """
-    Calculate basic summary statistics for an economic dataset.
+def validate_macro_dataset(data: pd.DataFrame) -> bool:
+    """Validate that a dataset contains the required macroeconomic columns."""
+    missing_columns = [column for column in REQUIRED_MACRO_COLUMNS if column not in data.columns]
 
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
-    Returns
-    -------
-    pandas.DataFrame
-        Summary statistics.
-    """
+    if data.empty:
+        raise ValueError("Dataset is empty.")
+
+    return True
+
+
+def _validate_required_columns(data: pd.DataFrame, required_columns: Iterable[str]) -> bool:
+    missing_columns = [column for column in required_columns if column not in data.columns]
+
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Basic analysis
+# ---------------------------------------------------------------------------
+
+
+def calculate_summary_statistics(data: pd.DataFrame) -> pd.DataFrame:
+    """Calculate basic summary statistics for an economic dataset."""
     return data.describe()
 
 
-def calculate_average_growth(data, column):
-    """
-    Calculate the average value of a selected economic indicator.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    column : str
-        Column name of the economic indicator.
-
-    Returns
-    -------
-    float
-        Average value of the selected column.
-    """
-    return data[column].mean()
+def calculate_average_growth(data: pd.DataFrame, column: str) -> float:
+    """Calculate the average value of a selected economic indicator."""
+    return float(data[column].mean())
 
 
-def find_highest_value_year(data, column):
-    """
-    Find the year with the highest value for a selected economic indicator.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    column : str
-        Column name of the economic indicator.
-
-    Returns
-    -------
-    pandas.Series
-        Row with the highest value.
-    """
+def find_highest_value_year(data: pd.DataFrame, column: str) -> pd.Series:
+    """Find the row with the highest value for a selected indicator."""
     return data.loc[data[column].idxmax()]
 
 
-def find_lowest_value_year(data, column):
-    """
-    Find the year with the lowest value for a selected economic indicator.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    column : str
-        Column name of the economic indicator.
-
-    Returns
-    -------
-    pandas.Series
-        Row with the lowest value.
-    """
+def find_lowest_value_year(data: pd.DataFrame, column: str) -> pd.Series:
+    """Find the row with the lowest value for a selected indicator."""
     return data.loc[data[column].idxmin()]
 
 
-def calculate_correlation_matrix(data, columns):
-    """
-    Calculate a correlation matrix for selected economic indicators.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    columns : list
-        List of columns to include in the correlation matrix.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Correlation matrix.
-    """
+def calculate_correlation_matrix(data: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Calculate a correlation matrix for selected economic indicators."""
     return data[columns].corr()
 
 
-def create_line_chart(data, x_column, y_column, output_path):
-    """
-    Create and save a line chart for an economic indicator.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    x_column : str
-        Column to use for the x-axis.
-    y_column : str
-        Column to use for the y-axis.
-    output_path : str
-        Path where the chart image will be saved.
-    """
+def create_line_chart(data: pd.DataFrame, x_column: str, y_column: str, output_path: str | Path) -> Path:
+    """Create and save a line chart for an economic indicator."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -151,103 +111,75 @@ def create_line_chart(data, x_column, y_column, output_path):
     plt.savefig(output_path)
     plt.close()
 
-
-def _validate_required_columns(data, required_columns):
-    """
-    Validate that a dataset contains required columns.
-    """
-    missing_columns = [column for column in required_columns if column not in data.columns]
-
-    if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
-
-    return True
+    return output_path
 
 
-def _is_missing(value):
-    """
-    Check whether a value is missing.
-    """
+# ---------------------------------------------------------------------------
+# Classification helpers
+# ---------------------------------------------------------------------------
+
+
+def _is_missing(value) -> bool:
     return value is None or value != value
 
 
-def classify_inflation_pressure(inflation_rate):
-    """
-    Classify inflation pressure based on the latest inflation rate.
-    """
+def classify_inflation_pressure(inflation_rate: float) -> str:
+    """Classify inflation pressure."""
     if _is_missing(inflation_rate):
         return "Unknown"
-
     if inflation_rate >= 4.0:
         return "High"
-
     if inflation_rate >= 2.5:
         return "Elevated"
-
     if inflation_rate < 1.0:
         return "Low"
-
     return "Normal"
 
 
-def classify_growth_condition(gdp_growth):
-    """
-    Classify economic growth condition based on GDP growth.
-    """
+def classify_growth_condition(gdp_growth: float) -> str:
+    """Classify economic growth conditions."""
     if _is_missing(gdp_growth):
         return "Unknown"
-
     if gdp_growth < 0:
         return "Contraction"
-
     if gdp_growth < 1.5:
         return "Weak"
-
     if gdp_growth <= 3.0:
         return "Moderate"
-
     return "Strong"
 
 
-def classify_labor_market(unemployment_rate):
-    """
-    Classify labor market condition based on unemployment rate.
-    """
+def classify_labor_market(unemployment_rate: float) -> str:
+    """Classify labor market conditions."""
     if _is_missing(unemployment_rate):
         return "Unknown"
-
     if unemployment_rate < 3.0:
         return "Tight"
-
     if unemployment_rate <= 4.0:
         return "Stable"
-
     if unemployment_rate <= 5.0:
         return "Soft"
-
     return "Weak"
 
 
-def classify_monetary_condition(interest_rate):
-    """
-    Classify monetary condition based on the interest rate.
-    """
+def classify_monetary_condition(interest_rate: float) -> str:
+    """Classify monetary conditions based on the interest rate."""
     if _is_missing(interest_rate):
         return "Unknown"
-
     if interest_rate >= 3.0:
         return "Tight"
-
     if interest_rate >= 1.5:
         return "Neutral"
-
     return "Accommodative"
 
 
-def calculate_macro_risk_score(signals):
-    """
-    Calculate a simple macroeconomic risk score from classified signals.
-    """
+# ---------------------------------------------------------------------------
+# Macro risk screening
+# ---------------------------------------------------------------------------
+
+
+def calculate_macro_risk_score(signals: Mapping[str, str]) -> int:
+    """Calculate a simple macroeconomic risk score from classified signals."""
     score = 0
 
     if signals["inflation_pressure"] == "High":
@@ -271,75 +203,44 @@ def calculate_macro_risk_score(signals):
     return score
 
 
-def classify_overall_macro_risk(score):
-    """
-    Classify the overall macroeconomic risk level.
-    """
+def classify_overall_macro_risk(score: int) -> str:
+    """Classify the overall macroeconomic risk level."""
     if score >= 5:
         return "High"
-
     if score >= 3:
         return "Elevated"
-
     if score >= 1:
         return "Moderate"
-
     return "Low"
 
 
-def generate_macro_risk_summary(analysis):
-    """
-    Generate a beginner-friendly written summary of macroeconomic conditions.
-    """
+def generate_macro_risk_summary(analysis: Mapping) -> str:
+    """Generate a beginner-friendly written summary of macroeconomic conditions."""
     year = analysis["latest_year"]
     signals = analysis["signals"]
     overall_risk = analysis["overall_risk"]
 
-    summary = []
-    summary.append(
-        f"In {year}, the overall macroeconomic risk level is classified as {overall_risk}."
-    )
-    summary.append(
-        f"Inflation pressure is {signals['inflation_pressure'].lower()}, "
-        f"while growth conditions are {signals['growth_condition'].lower()}."
-    )
-    summary.append(
-        f"The labor market is classified as {signals['labor_market'].lower()}, "
-        f"and monetary conditions are {signals['monetary_condition'].lower()}."
-    )
-    summary.append(
-        "This classification is based on simple educational thresholds and should be "
-        "interpreted as a beginner-friendly macroeconomic screening tool, not as a "
-        "formal forecast."
+    return (
+        f"In {year}, the overall macroeconomic risk level is classified as {overall_risk}. "
+        f"Inflation pressure is {signals['inflation_pressure'].lower()}, while growth "
+        f"conditions are {signals['growth_condition'].lower()}. The labor market is "
+        f"classified as {signals['labor_market'].lower()}, and monetary conditions are "
+        f"{signals['monetary_condition'].lower()}. This classification is based on "
+        f"simple educational thresholds and should be interpreted as a screening tool, "
+        f"not as a formal forecast."
     )
 
-    return " ".join(summary)
 
-
-def analyze_macro_risk(data):
-    """
-    Analyze macroeconomic risk using the latest observation in the dataset.
-
-    Required columns:
-    - year
-    - gdp_growth
-    - inflation_rate
-    - unemployment_rate
-    - interest_rate
-    """
-    _validate_required_columns(data, REQUIRED_MACRO_COLUMNS)
-
+def analyze_macro_risk(data: pd.DataFrame) -> Dict:
+    """Analyze macroeconomic risk using the latest observation in the dataset."""
+    validate_macro_dataset(data)
     latest_row = data.sort_values("year").iloc[-1]
 
     signals = {
-        "inflation_pressure": classify_inflation_pressure(
-            latest_row["inflation_rate"]
-        ),
-        "growth_condition": classify_growth_condition(latest_row["gdp_growth"]),
-        "labor_market": classify_labor_market(latest_row["unemployment_rate"]),
-        "monetary_condition": classify_monetary_condition(
-            latest_row["interest_rate"]
-        ),
+        "inflation_pressure": classify_inflation_pressure(float(latest_row["inflation_rate"])),
+        "growth_condition": classify_growth_condition(float(latest_row["gdp_growth"])),
+        "labor_market": classify_labor_market(float(latest_row["unemployment_rate"])),
+        "monetary_condition": classify_monetary_condition(float(latest_row["interest_rate"])),
     }
 
     risk_score = calculate_macro_risk_score(signals)
@@ -357,21 +258,18 @@ def analyze_macro_risk(data):
         "risk_score": risk_score,
         "overall_risk": overall_risk,
     }
-
     analysis["summary"] = generate_macro_risk_summary(analysis)
-
     return analysis
 
 
-def estimate_macro_baseline(data):
-    """
-    Estimate simple baseline macroeconomic conditions from historical data.
+# ---------------------------------------------------------------------------
+# Monetary policy stance analysis
+# ---------------------------------------------------------------------------
 
-    This function uses recent averages as educational baseline values.
-    It is not intended for professional forecasting.
-    """
-    _validate_required_columns(data, REQUIRED_MACRO_COLUMNS)
 
+def estimate_macro_baseline(data: pd.DataFrame) -> Dict[str, float]:
+    """Estimate baseline macroeconomic conditions from recent historical averages."""
+    validate_macro_dataset(data)
     recent_data = data.sort_values("year").tail(5)
 
     return {
@@ -383,24 +281,15 @@ def estimate_macro_baseline(data):
 
 
 def calculate_policy_rule_rate(
-    inflation_rate,
-    gdp_growth,
-    target_inflation=2.0,
-    neutral_interest_rate=2.0,
-    potential_growth=2.0,
-    inflation_weight=0.5,
-    growth_weight=0.5,
-):
-    """
-    Calculate a simple educational policy-rule interest rate.
-
-    The rule raises the recommended interest rate when inflation is above target
-    or when growth is above potential. It lowers the recommended rate when
-    inflation is below target or growth is below potential.
-
-    This is a simplified teaching tool inspired by monetary policy rules.
-    It is not a formal central bank model.
-    """
+    inflation_rate: float,
+    gdp_growth: float,
+    target_inflation: float = 2.0,
+    neutral_interest_rate: float = 2.0,
+    potential_growth: float = 2.0,
+    inflation_weight: float = 0.5,
+    growth_weight: float = 0.5,
+) -> float:
+    """Calculate a simplified educational policy-rule interest rate."""
     inflation_gap = inflation_rate - target_inflation
     growth_gap = gdp_growth - potential_growth
 
@@ -410,38 +299,25 @@ def calculate_policy_rule_rate(
         + growth_weight * growth_gap
     )
 
-    return max(0.0, recommended_rate)
+    return max(0.0, float(recommended_rate))
 
 
-def classify_policy_stance(policy_gap):
-    """
-    Classify monetary policy stance using the gap between actual and recommended rates.
-    """
+def classify_policy_stance(policy_gap: float) -> str:
+    """Classify monetary policy stance using actual minus benchmark rate."""
     if policy_gap >= 0.75:
         return "Tight"
-
     if policy_gap >= 0.25:
         return "Moderately Tight"
-
     if policy_gap <= -0.75:
         return "Accommodative"
-
     if policy_gap <= -0.25:
         return "Moderately Accommodative"
-
     return "Neutral"
 
 
-def generate_monetary_policy_summary(analysis):
-    """
-    Generate a beginner-friendly written summary of monetary policy stance.
-    """
-    latest_year = analysis["latest_year"]
-    stance = analysis["policy_stance"]
+def generate_monetary_policy_summary(analysis: Mapping) -> str:
+    """Generate a beginner-friendly summary of monetary policy stance."""
     policy_gap = analysis["policy_gap"]
-    actual_rate = analysis["actual_interest_rate"]
-    recommended_rate = analysis["recommended_policy_rate"]
-
     if policy_gap > 0:
         direction_text = "above"
     elif policy_gap < 0:
@@ -449,52 +325,34 @@ def generate_monetary_policy_summary(analysis):
     else:
         direction_text = "equal to"
 
-    summary = (
-        f"In {latest_year}, monetary policy is classified as {stance}. "
-        f"The actual interest rate is {actual_rate:.2f}, while the simple "
-        f"policy-rule rate is {recommended_rate:.2f}. "
-        f"This means the actual rate is {abs(policy_gap):.2f} percentage points "
-        f"{direction_text} the educational policy-rule benchmark."
+    return (
+        f"In {analysis['latest_year']}, monetary policy is classified as "
+        f"{analysis['policy_stance']}. The actual interest rate is "
+        f"{analysis['actual_interest_rate']:.2f}, while the simple policy-rule rate "
+        f"is {analysis['recommended_policy_rate']:.2f}. This means the actual rate "
+        f"is {abs(policy_gap):.2f} percentage points {direction_text} the educational "
+        f"policy-rule benchmark."
     )
-
-    return summary
 
 
 def analyze_monetary_policy_stance(
-    data,
-    target_inflation=2.0,
-    neutral_interest_rate=None,
-    potential_growth=None,
-    inflation_weight=0.5,
-    growth_weight=0.5,
-):
-    """
-    Analyze whether monetary policy looks tight, neutral, or accommodative.
-
-    Required columns:
-    - year
-    - gdp_growth
-    - inflation_rate
-    - unemployment_rate
-    - interest_rate
-
-    Returns
-    -------
-    dict
-        Beginner-friendly monetary policy stance analysis.
-    """
-    _validate_required_columns(data, REQUIRED_MACRO_COLUMNS)
-
+    data: pd.DataFrame,
+    target_inflation: float = 2.0,
+    neutral_interest_rate: Optional[float] = None,
+    potential_growth: Optional[float] = None,
+    inflation_weight: float = 0.5,
+    growth_weight: float = 0.5,
+) -> Dict:
+    """Analyze whether policy looks tight, neutral, or accommodative."""
+    validate_macro_dataset(data)
     baseline = estimate_macro_baseline(data)
 
     if neutral_interest_rate is None:
         neutral_interest_rate = baseline["neutral_interest_rate"]
-
     if potential_growth is None:
         potential_growth = baseline["potential_growth"]
 
     latest_row = data.sort_values("year").iloc[-1]
-
     actual_interest_rate = float(latest_row["interest_rate"])
     inflation_rate = float(latest_row["inflation_rate"])
     gdp_growth = float(latest_row["gdp_growth"])
@@ -532,218 +390,88 @@ def analyze_monetary_policy_stance(
             "growth_gap": round(gdp_growth - potential_growth, 2),
         },
     }
-
     analysis["summary"] = generate_monetary_policy_summary(analysis)
-
     return analysis
 
 
-def generate_monetary_policy_report(data, output_path):
-    """
-    Generate a Markdown report for monetary policy stance analysis.
-    """
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    analysis = analyze_monetary_policy_stance(data)
-
-    lines = []
-    lines.append("# Monetary Policy Stance Report")
-    lines.append("")
-    lines.append("This report was automatically generated with EconKit.")
-    lines.append("")
-    lines.append("## Policy stance")
-    lines.append("")
-    lines.append(f"- Latest year: {analysis['latest_year']}")
-    lines.append(f"- Policy stance: {analysis['policy_stance']}")
-    lines.append(f"- Actual interest rate: {analysis['actual_interest_rate']:.2f}")
-    lines.append(
-        f"- Recommended policy-rule rate: "
-        f"{analysis['recommended_policy_rate']:.2f}"
-    )
-    lines.append(f"- Policy gap: {analysis['policy_gap']:.2f}")
-    lines.append("")
-    lines.append("## Inputs")
-    lines.append("")
-    for name, value in analysis["inputs"].items():
-        readable_name = name.replace("_", " ").title()
-        lines.append(f"- {readable_name}: {value:.2f}")
-    lines.append("")
-    lines.append("## Economic gaps")
-    lines.append("")
-    for name, value in analysis["gaps"].items():
-        readable_name = name.replace("_", " ").title()
-        lines.append(f"- {readable_name}: {value:.2f}")
-    lines.append("")
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(analysis["summary"])
-    lines.append("")
-    lines.append("## Educational note")
-    lines.append("")
-    lines.append(
-        "This monetary policy analysis is a simplified educational tool. "
-        "It should not be interpreted as an official policy recommendation."
-    )
-
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
-    return output_path
+# ---------------------------------------------------------------------------
+# Economic cycle and inflation diagnosis
+# ---------------------------------------------------------------------------
 
 
-def generate_markdown_report(data, indicators, output_path):
-    """
-    Generate a beginner-friendly Markdown report for economic data.
+def classify_business_cycle(gdp_growth: float, unemployment_rate: float, inflation_rate: float) -> str:
+    """Classify a simple business-cycle phase."""
+    if gdp_growth < 0:
+        return "Recession"
+    if gdp_growth < 1.5 and unemployment_rate >= 4.0:
+        return "Weak Recovery"
+    if gdp_growth > 3.0 and inflation_rate >= 3.0:
+        return "Overheating"
+    if 1.5 <= gdp_growth <= 3.0:
+        return "Stable Expansion"
+    return "Expansion"
 
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Economic dataset.
-    indicators : list
-        List of economic indicators to summarize.
-    output_path : str
-        Path where the Markdown report will be saved.
-    """
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    summary = calculate_summary_statistics(data[indicators])
-    correlations = calculate_correlation_matrix(data, indicators)
-    policy_analysis = analyze_monetary_policy_stance(data)
+def diagnose_inflation_source(gdp_growth: float, inflation_rate: float, unemployment_rate: float) -> str:
+    """Provide a simple educational diagnosis of inflation pressure."""
+    if inflation_rate < 2.0:
+        return "Low inflation environment"
+    if inflation_rate >= 3.0 and gdp_growth > 2.5 and unemployment_rate < 4.0:
+        return "Demand-side inflation pressure"
+    if inflation_rate >= 3.0 and gdp_growth < 1.5:
+        return "Supply-side or stagflation-style pressure"
+    if inflation_rate >= 3.0:
+        return "Broad inflation pressure"
+    return "Contained inflation pressure"
 
-    lines = []
-    lines.append("# Economic Data Analysis Report")
-    lines.append("")
-    lines.append("This report was automatically generated with EconKit.")
-    lines.append("")
-    lines.append("## Dataset overview")
-    lines.append("")
-    lines.append(f"- Number of observations: {len(data)}")
-    lines.append(f"- Available years: {data['year'].min()} to {data['year'].max()}")
-    lines.append("")
-    lines.append("## Summary statistics")
-    lines.append("")
-    lines.append(summary.round(2).to_markdown())
-    lines.append("")
-    lines.append("## Indicator highlights")
-    lines.append("")
 
-    for column in indicators:
-        highest = find_highest_value_year(data, column)
-        lowest = find_lowest_value_year(data, column)
-        average_value = calculate_average_growth(data, column)
-        readable_name = column.replace("_", " ").title()
+def analyze_business_cycle(data: pd.DataFrame) -> Dict:
+    """Analyze the latest business-cycle phase using simple educational rules."""
+    validate_macro_dataset(data)
+    latest_row = data.sort_values("year").iloc[-1]
 
-        lines.append(f"### {readable_name}")
-        lines.append("")
-        lines.append(f"- Average value: {average_value:.2f}")
-        lines.append(f"- Highest value: {highest[column]} in {int(highest['year'])}")
-        lines.append(f"- Lowest value: {lowest[column]} in {int(lowest['year'])}")
-        lines.append("")
+    gdp_growth = float(latest_row["gdp_growth"])
+    inflation_rate = float(latest_row["inflation_rate"])
+    unemployment_rate = float(latest_row["unemployment_rate"])
 
-    lines.append("## Correlation matrix")
-    lines.append("")
-    lines.append(correlations.round(2).to_markdown())
-    lines.append("")
-    lines.append("## Monetary policy stance")
-    lines.append("")
-    lines.append(f"- Policy stance: {policy_analysis['policy_stance']}")
-    lines.append(
-        f"- Actual interest rate: "
-        f"{policy_analysis['actual_interest_rate']:.2f}"
-    )
-    lines.append(
-        f"- Recommended policy-rule rate: "
-        f"{policy_analysis['recommended_policy_rate']:.2f}"
-    )
-    lines.append(f"- Policy gap: {policy_analysis['policy_gap']:.2f}")
-    lines.append("")
-    lines.append(policy_analysis["summary"])
-    lines.append("")
-    lines.append("## Notes")
-    lines.append("")
-    lines.append(
-        "This report is intended for educational use. "
-        "It helps students practice basic economic data analysis with Python."
+    phase = classify_business_cycle(gdp_growth, unemployment_rate, inflation_rate)
+    inflation_source = diagnose_inflation_source(gdp_growth, inflation_rate, unemployment_rate)
+
+    summary = (
+        f"In {int(latest_row['year'])}, the economy is classified as {phase}. "
+        f"The inflation diagnosis is: {inflation_source}. This is a simple educational "
+        f"classification based on GDP growth, inflation, and unemployment."
     )
 
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return {
+        "latest_year": int(latest_row["year"]),
+        "business_cycle_phase": phase,
+        "inflation_diagnosis": inflation_source,
+        "summary": summary,
+    }
 
 
-def generate_economic_report(data_path, output_dir):
-    """
-    Generate a full economic analysis report from a CSV dataset.
-
-    Parameters
-    ----------
-    data_path : str
-        Path to the economic dataset.
-    output_dir : str
-        Directory where report files will be saved.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    data = load_economic_data(data_path)
-
-    indicators = [
-        "gdp_growth",
-        "inflation_rate",
-        "unemployment_rate",
-        "interest_rate",
-    ]
-
-    for indicator in indicators:
-        chart_path = output_dir / f"{indicator}.png"
-        create_line_chart(data, "year", indicator, chart_path)
-
-    report_path = output_dir / "economic_report.md"
-    generate_markdown_report(data, indicators, report_path)
-
-    policy_report_path = output_dir / "monetary_policy_report.md"
-    generate_monetary_policy_report(data, policy_report_path)
-
-    return report_path
+# ---------------------------------------------------------------------------
+# Scenario simulation
+# ---------------------------------------------------------------------------
 
 
 def simulate_macro_scenario(
-    data,
-    scenario_name,
-    years=5,
-    demand_shock=0.0,
-    supply_shock=0.0,
-    policy_shock=0.0,
-):
-    """
-    Simulate a simple macroeconomic scenario.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Historical macroeconomic dataset.
-    scenario_name : str
-        Name of the scenario.
-    years : int
-        Number of future years to simulate.
-    demand_shock : float
-        Positive values increase growth and inflation. Negative values reduce growth.
-    supply_shock : float
-        Positive values increase inflation and reduce growth.
-    policy_shock : float
-        Positive values increase the interest rate path.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Simulated scenario dataset.
-    """
+    data: pd.DataFrame,
+    scenario_name: str,
+    years: int = 5,
+    demand_shock: float = 0.0,
+    supply_shock: float = 0.0,
+    policy_shock: float = 0.0,
+) -> pd.DataFrame:
+    """Simulate a simple macroeconomic scenario."""
+    validate_macro_dataset(data)
     baseline = estimate_macro_baseline(data)
     latest_row = data.sort_values("year").iloc[-1]
 
     previous_gdp_growth = float(latest_row["gdp_growth"])
     previous_inflation = float(latest_row["inflation_rate"])
     previous_unemployment = float(latest_row["unemployment_rate"])
-
     latest_year = int(latest_row["year"])
 
     potential_growth = baseline["potential_growth"]
@@ -810,41 +538,18 @@ def simulate_macro_scenario(
     return pd.DataFrame(results)
 
 
-def build_default_macro_scenarios(data, years=5):
-    """
-    Build a set of default macroeconomic scenarios.
-    """
+def build_default_macro_scenarios(data: pd.DataFrame, years: int = 5) -> Dict[str, pd.DataFrame]:
+    """Build a default scenario set."""
     return {
-        "baseline": simulate_macro_scenario(
-            data,
-            scenario_name="baseline",
-            years=years,
-        ),
-        "inflation_shock": simulate_macro_scenario(
-            data,
-            scenario_name="inflation_shock",
-            years=years,
-            supply_shock=2.0,
-        ),
-        "recession_shock": simulate_macro_scenario(
-            data,
-            scenario_name="recession_shock",
-            years=years,
-            demand_shock=-2.0,
-        ),
-        "tight_policy": simulate_macro_scenario(
-            data,
-            scenario_name="tight_policy",
-            years=years,
-            policy_shock=1.5,
-        ),
+        "baseline": simulate_macro_scenario(data, "baseline", years=years),
+        "inflation_shock": simulate_macro_scenario(data, "inflation_shock", years=years, supply_shock=2.0),
+        "recession_shock": simulate_macro_scenario(data, "recession_shock", years=years, demand_shock=-2.0),
+        "tight_policy": simulate_macro_scenario(data, "tight_policy", years=years, policy_shock=1.5),
     }
 
 
-def compare_macro_scenarios(scenarios):
-    """
-    Compare final-year outcomes across macroeconomic scenarios.
-    """
+def compare_macro_scenarios(scenarios: Mapping[str, pd.DataFrame]) -> pd.DataFrame:
+    """Compare final-year outcomes across macroeconomic scenarios."""
     rows = []
 
     for scenario_name, scenario_data in scenarios.items():
@@ -867,62 +572,201 @@ def compare_macro_scenarios(scenarios):
     return pd.DataFrame(rows)
 
 
-def generate_macro_scenario_report(scenarios, output_path):
-    """
-    Generate a Markdown report comparing macroeconomic scenarios.
-    """
+# ---------------------------------------------------------------------------
+# Reports and export helpers
+# ---------------------------------------------------------------------------
+
+
+def save_json(data: Mapping, output_path: str | Path) -> Path:
+    """Save a dictionary as a JSON file."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    comparison = compare_macro_scenarios(scenarios)
-
-    lines = []
-    lines.append("# Macro Scenario Analysis Report")
-    lines.append("")
-    lines.append("This report was automatically generated with EconKit.")
-    lines.append("")
-    lines.append("## Scenario comparison")
-    lines.append("")
-    lines.append(comparison.to_markdown(index=False))
-    lines.append("")
-    lines.append("## Scenario descriptions")
-    lines.append("")
-    lines.append("- `baseline`: continuation of recent macroeconomic conditions")
-    lines.append("- `inflation_shock`: higher inflation caused by a supply-side shock")
-    lines.append("- `recession_shock`: weaker growth caused by a negative demand shock")
-    lines.append("- `tight_policy`: higher interest rates caused by a monetary policy shock")
-    lines.append("")
-    lines.append("## Interpretation guide")
-    lines.append("")
-    lines.append(
-        "Students can compare scenarios to understand how macroeconomic shocks may "
-        "affect growth, inflation, unemployment, interest rates, and overall macro "
-        "risk."
-    )
-    lines.append("")
-    lines.append("## Educational note")
-    lines.append("")
-    lines.append(
-        "This scenario simulator uses simple educational rules. "
-        "It is not intended to be a professional forecasting model."
-    )
-
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
+    output_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return output_path
 
 
-def generate_macro_scenario_analysis(data_path, output_dir, years=5):
-    """
-    Generate scenario CSV files, comparison data, and a Markdown scenario report.
-    """
+def _markdown_table(data: pd.DataFrame) -> str:
+    """Return a Markdown table without requiring optional dependencies."""
+    try:
+        return data.to_markdown(index=False)
+    except Exception:
+        return data.to_string(index=False)
+
+
+def generate_monetary_policy_report(data: pd.DataFrame, output_path: str | Path) -> Path:
+    """Generate a Markdown monetary policy stance report."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    analysis = analyze_monetary_policy_stance(data)
+
+    lines = [
+        "# Monetary Policy Stance Report",
+        "",
+        "This report was automatically generated with EconKit.",
+        "",
+        "## Policy stance",
+        "",
+        f"- Latest year: {analysis['latest_year']}",
+        f"- Policy stance: {analysis['policy_stance']}",
+        f"- Actual interest rate: {analysis['actual_interest_rate']:.2f}",
+        f"- Recommended policy-rule rate: {analysis['recommended_policy_rate']:.2f}",
+        f"- Policy gap: {analysis['policy_gap']:.2f}",
+        "",
+        "## Summary",
+        "",
+        analysis["summary"],
+        "",
+        "## Educational note",
+        "",
+        "This analysis is a simplified educational tool, not an official policy recommendation.",
+    ]
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
+def generate_macro_scenario_report(scenarios: Mapping[str, pd.DataFrame], output_path: str | Path) -> Path:
+    """Generate a Markdown scenario comparison report."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    comparison = compare_macro_scenarios(scenarios)
+
+    lines = [
+        "# Macro Scenario Analysis Report",
+        "",
+        "This report was automatically generated with EconKit.",
+        "",
+        "## Scenario comparison",
+        "",
+        _markdown_table(comparison),
+        "",
+        "## Scenario descriptions",
+        "",
+        "- `baseline`: continuation of recent macroeconomic conditions",
+        "- `inflation_shock`: higher inflation caused by a supply-side shock",
+        "- `recession_shock`: weaker growth caused by a negative demand shock",
+        "- `tight_policy`: higher interest rates caused by a monetary policy shock",
+        "",
+        "## Educational note",
+        "",
+        "This scenario simulator uses simple educational rules and is not a professional forecast.",
+    ]
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
+def generate_markdown_report(data: pd.DataFrame, indicators: list[str], output_path: str | Path) -> Path:
+    """Generate a beginner-friendly Markdown report for economic data."""
+    validate_macro_dataset(data)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary = calculate_summary_statistics(data[indicators]).round(2)
+    correlations = calculate_correlation_matrix(data, indicators).round(2)
+    risk_analysis = analyze_macro_risk(data)
+    policy_analysis = analyze_monetary_policy_stance(data)
+    cycle_analysis = analyze_business_cycle(data)
+
+    lines = [
+        "# Economic Data Analysis Report",
+        "",
+        "This report was automatically generated with EconKit.",
+        "",
+        "## Dataset overview",
+        "",
+        f"- Number of observations: {len(data)}",
+        f"- Available years: {int(data['year'].min())} to {int(data['year'].max())}",
+        "",
+        "## Summary statistics",
+        "",
+        summary.to_markdown(),
+        "",
+        "## Indicator highlights",
+        "",
+    ]
+
+    for column in indicators:
+        highest = find_highest_value_year(data, column)
+        lowest = find_lowest_value_year(data, column)
+        average_value = calculate_average_growth(data, column)
+        readable_name = column.replace("_", " ").title()
+
+        lines.extend(
+            [
+                f"### {readable_name}",
+                "",
+                f"- Average value: {average_value:.2f}",
+                f"- Highest value: {highest[column]} in {int(highest['year'])}",
+                f"- Lowest value: {lowest[column]} in {int(lowest['year'])}",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Correlation matrix",
+            "",
+            correlations.to_markdown(),
+            "",
+            "## Macro risk",
+            "",
+            f"- Overall macro risk: {risk_analysis['overall_risk']}",
+            f"- Risk score: {risk_analysis['risk_score']}",
+            "",
+            risk_analysis["summary"],
+            "",
+            "## Monetary policy stance",
+            "",
+            f"- Policy stance: {policy_analysis['policy_stance']}",
+            f"- Actual interest rate: {policy_analysis['actual_interest_rate']:.2f}",
+            f"- Recommended policy-rule rate: {policy_analysis['recommended_policy_rate']:.2f}",
+            f"- Policy gap: {policy_analysis['policy_gap']:.2f}",
+            "",
+            policy_analysis["summary"],
+            "",
+            "## Business cycle diagnosis",
+            "",
+            f"- Business-cycle phase: {cycle_analysis['business_cycle_phase']}",
+            f"- Inflation diagnosis: {cycle_analysis['inflation_diagnosis']}",
+            "",
+            cycle_analysis["summary"],
+            "",
+            "## Notes",
+            "",
+            "This report is intended for educational use and should not be interpreted as a formal forecast.",
+        ]
+    )
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
+def generate_economic_report(data_path: str | Path, output_dir: str | Path) -> Path:
+    """Generate a full economic report and charts from a CSV dataset."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
     data = load_economic_data(data_path)
+    validate_macro_dataset(data)
+
+    for indicator in DEFAULT_INDICATORS:
+        create_line_chart(data, "year", indicator, output_dir / f"{indicator}.png")
+
+    report_path = output_dir / "economic_report.md"
+    generate_markdown_report(data, DEFAULT_INDICATORS, report_path)
+    generate_monetary_policy_report(data, output_dir / "monetary_policy_report.md")
+
+    return report_path
+
+
+def generate_macro_scenario_analysis(data_path: str | Path, output_dir: str | Path, years: int = 5) -> Dict:
+    """Generate scenario CSV files, comparison data, and a Markdown scenario report."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    data = load_economic_data(data_path)
+    validate_macro_dataset(data)
 
     scenarios = build_default_macro_scenarios(data, years=years)
-
     scenario_paths = {}
 
     for scenario_name, scenario_data in scenarios.items():
