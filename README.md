@@ -2,118 +2,169 @@
 
 ![Run Tests](https://github.com/car6770/econkit/actions/workflows/tests.yml/badge.svg)
 
-EconKit is an open-source Python toolkit for beginner-friendly economics data analysis.
+EconKit is an open-source Python toolkit for beginner-friendly economics data analysis, automated reporting, macroeconomic risk analysis, and macroeconomic scenario simulation.
 
-The goal of this project is to help students and early researchers organize, clean, analyze, visualize, and interpret economic data using Python.
+The goal of this project is to help economics students and early researchers move from raw macroeconomic data to summary statistics, visualizations, written reports, risk interpretation, and scenario analysis using Python.
 
 ## What is EconKit?
 
-EconKit provides simple examples, reusable Python functions, automated reports, and beginner-friendly interpretation tools for basic economics data analysis.
+EconKit provides reusable Python functions, command-line tools, examples, tests, and documentation for basic economics data analysis.
 
-It is designed for students who are learning how to work with economic datasets and want clear examples that connect economic theory with actual Python workflows.
+It is designed for students who are learning how to work with economic datasets and want clear, practical examples that connect economic concepts with Python workflows.
 
 ## Why this project matters
 
-Many economics students study macroeconomic concepts such as inflation, GDP growth, unemployment, and interest rates, but they often lack simple, beginner-friendly tools for analyzing these indicators with real data.
+Many economics students study concepts such as inflation, GDP growth, unemployment, interest rates, and macroeconomic shocks, but they often lack simple tools for practicing these ideas with data.
 
-EconKit aims to make economics data analysis easier by providing:
+EconKit aims to make macroeconomic data analysis easier by providing:
 
 * Small sample datasets
 * Clear Python examples
-* Reusable analysis functions
-* Automated report generation
-* Basic macroeconomic interpretation tools
+* Automated Markdown reports
+* Simple visualizations
+* Macro risk classification
+* Scenario simulation tools
 * Beginner-friendly documentation
-
-## Educational purpose
-
-EconKit is designed as an educational open-source project for economics students who are learning Python-based data analysis.
-
-This project helps students practice how to move from raw data to analysis, visualization, interpretation, and written reporting.
-
-The project is especially useful for students who want to learn how to analyze macroeconomic indicators such as:
-
-* GDP growth
-* Inflation
-* Unemployment
-* Interest rates
+* A command-line interface
 
 ## Main features
 
-* Load economic datasets from CSV files
+* Validate economic CSV datasets
+* Load and clean macroeconomic data
 * Calculate summary statistics
 * Find highest and lowest values by year
-* Visualize macroeconomic trends
+* Create line charts for macroeconomic indicators
 * Generate Markdown economic analysis reports
-* Analyze simple macroeconomic risk conditions
-* Use a command-line interface for report generation
-* Provide beginner-friendly examples and tutorials
+* Analyze macroeconomic risk using simple educational thresholds
+* Simulate macroeconomic scenarios
+* Compare baseline, inflation shock, recession shock, and tight policy scenarios
+* Run the full workflow from the command line
+* Run automated tests with GitHub Actions
 
 ## Project structure
 
 * `data/sample_economic_data.csv`: sample macroeconomic dataset
-* `examples/analyze_macro_data.py`: example Python script for analysis and visualization
-* `examples/generate_report.py`: example script for generating an economic report
-* `examples/analyze_macro_risk.py`: example script for macro risk analysis
-* `src/econkit.py`: reusable Python functions for economic data analysis
-* `src/econkit_cli.py`: command-line interface for EconKit
-* `tests/`: automated tests for core functions and CLI tools
-* `docs/tutorial.md`: beginner-friendly tutorial
-* `docs/sample_report.md`: sample economic report
-* `requirements.txt`: required Python packages
+* `src/econkit.py`: core EconKit functions
+* `src/econkit_cli.py`: command-line interface
+* `examples/analyze_macro_data.py`: basic analysis example
+* `examples/generate_report.py`: report generation example
+* `examples/analyze_macro_risk.py`: macro risk analysis example
+* `examples/run_macro_scenarios.py`: macro scenario simulation example
+* `tests/`: automated tests
+* `docs/tutorial.md`: beginner tutorial
+* `docs/cli.md`: CLI guide
+* `docs/sample_report.md`: sample report
+* `pyproject.toml`: Python project configuration
+* `requirements.txt`: required packages
 
 ## Installation
 
-First, install the required Python packages:
+Install the required packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Basic usage
-
-Run the basic macroeconomic analysis example:
+For development, install the package in editable mode:
 
 ```bash
-python examples/analyze_macro_data.py
+pip install -e .
 ```
 
-The example script loads the sample economic dataset, prints summary statistics, and creates simple visualizations for inflation and GDP growth.
+## Quick start
 
-## Example dataset
+Run the full EconKit analysis pipeline:
 
-The sample dataset includes basic macroeconomic indicators:
+```bash
+python src/econkit_cli.py all data/sample_economic_data.csv --output-dir outputs --years 5
+```
 
-* GDP growth
-* Inflation rate
-* Unemployment rate
-* Interest rate
+This command generates:
 
-This dataset is designed for educational practice and beginner-friendly economic data analysis.
+* Economic report
+* Line charts
+* Macro risk summary
+* Macro risk JSON output
+* Scenario simulation files
+* Scenario comparison report
+
+If installed as a package, EconKit can also be run with:
+
+```bash
+econkit all data/sample_economic_data.csv --output-dir outputs --years 5
+```
+
+## Command-line interface
+
+EconKit includes a CLI with several commands.
+
+### Validate dataset
+
+```bash
+python src/econkit_cli.py validate data/sample_economic_data.csv
+```
+
+### Generate report
+
+```bash
+python src/econkit_cli.py report data/sample_economic_data.csv --output-dir outputs/report
+```
+
+### Analyze macro risk
+
+```bash
+python src/econkit_cli.py risk data/sample_economic_data.csv --output-dir outputs/risk
+```
+
+### Run macro scenarios
+
+```bash
+python src/econkit_cli.py scenarios data/sample_economic_data.csv --output-dir outputs/scenarios --years 5
+```
+
+### Run full pipeline
+
+```bash
+python src/econkit_cli.py all data/sample_economic_data.csv --output-dir outputs --years 5
+```
+
+A full CLI guide is available here:
+
+[docs/cli.md](docs/cli.md)
+
+## Required dataset format
+
+Input CSV files should include the following columns:
+
+* `year`
+* `gdp_growth`
+* `inflation_rate`
+* `unemployment_rate`
+* `interest_rate`
+
+The sample dataset is available here:
+
+`data/sample_economic_data.csv`
 
 ## Report generator
 
-EconKit includes a simple report generator for macroeconomic datasets.
+EconKit can generate a Markdown economic analysis report from a macroeconomic dataset.
 
 The report generator can:
 
 * Load economic data from CSV
 * Calculate summary statistics
 * Find highest and lowest values by year
-* Create line charts for key indicators
-* Generate a Markdown economic analysis report
+* Create charts for key indicators
+* Generate a written Markdown report
 
-Run the report generator with:
+Run the report example:
 
 ```bash
 python examples/generate_report.py
 ```
 
-Generated reports and charts are saved in the `outputs/` directory.
-
-## Sample output
-
-A sample economic report is available here:
+A sample report is available here:
 
 [docs/sample_report.md](docs/sample_report.md)
 
@@ -121,7 +172,7 @@ A sample economic report is available here:
 
 EconKit includes a simple macroeconomic risk analyzer.
 
-The macro risk analyzer uses the latest observation in a dataset to classify basic macroeconomic conditions, including:
+The analyzer uses the latest observation in a dataset to classify:
 
 * Inflation pressure
 * GDP growth condition
@@ -129,40 +180,44 @@ The macro risk analyzer uses the latest observation in a dataset to classify bas
 * Monetary condition
 * Overall macroeconomic risk level
 
-Run the macro risk analysis example with:
+Run the macro risk example:
 
 ```bash
 python examples/analyze_macro_risk.py
 ```
 
-The analyzer produces a beginner-friendly summary that helps students connect macroeconomic indicators with basic economic interpretation.
+This feature helps students connect macroeconomic indicators with basic interpretation rules.
 
-This feature is designed for educational use. It is not intended to be a formal forecast or professional economic assessment.
+Educational note: this tool is not intended to be a formal forecast or professional economic assessment.
 
-## Command-line interface
+## Macro Scenario Simulator
 
-EconKit includes a simple command-line interface for generating economic analysis outputs from a CSV dataset.
+EconKit includes a simple macroeconomic scenario simulator.
 
-You can run the CLI with:
+The simulator can generate and compare:
+
+* Baseline scenario
+* Inflation shock scenario
+* Recession shock scenario
+* Tight monetary policy scenario
+
+Run the scenario example:
 
 ```bash
-python src/econkit_cli.py data/sample_economic_data.csv --output-dir outputs
+python examples/run_macro_scenarios.py
 ```
 
-The CLI will generate:
+The scenario simulator generates:
 
-* A Markdown economic analysis report
-* Line charts for macroeconomic indicators
-* A macro risk summary
-* Beginner-friendly interpretation of the latest economic conditions
+* Scenario CSV files
+* Scenario comparison table
+* Markdown scenario analysis report
 
-Generated files are saved in the `outputs/` directory.
+This feature helps students understand how different macroeconomic shocks may affect GDP growth, inflation, unemployment, interest rates, and overall macro risk.
 
-This makes EconKit usable as a small command-line tool for economics students learning Python-based data analysis.
+Educational note: the scenario simulator uses simple educational rules and is not intended to be a professional forecasting model.
 
 ## Testing
-
-EconKit includes automated tests for core functions and command-line tools.
 
 Run tests with:
 
@@ -172,49 +227,46 @@ pytest
 
 The project also uses GitHub Actions to run tests automatically when changes are pushed.
 
-## Tutorial
+## Documentation
 
-A beginner-friendly tutorial is available here:
-
-[docs/tutorial.md](docs/tutorial.md)
+* [Beginner tutorial](docs/tutorial.md)
+* [CLI guide](docs/cli.md)
+* [Sample economic report](docs/sample_report.md)
 
 ## Example use cases
 
 EconKit can be used for:
 
 * Inflation trend analysis
-* Interest rate comparison
 * GDP growth visualization
 * Unemployment rate analysis
-* Basic macroeconomic time-series practice
-* Beginner-friendly economic report generation
-* Simple macroeconomic risk interpretation
-
-## Maintenance plan
-
-This repository will be maintained through regular updates, including:
-
-* Adding new economics datasets
-* Improving beginner-friendly tutorials
-* Adding tests for core functions
-* Expanding documentation
-* Reviewing issues and planned improvements
-* Creating small releases as the project grows
+* Interest rate comparison
+* Beginner-friendly economic reporting
+* Simple macro risk interpretation
+* Macroeconomic scenario comparison
+* Teaching Python-based economics data analysis
 
 ## Project status
 
-EconKit is in early development.
+EconKit is in early development, but the project now includes a complete beginner-friendly workflow:
 
-The current version includes sample data, analysis examples, automated report generation, macro risk analysis, CLI support, tests, documentation, and releases.
+1. Dataset validation
+2. Summary statistics
+3. Visualization
+4. Report generation
+5. Macro risk analysis
+6. Scenario simulation
+7. CLI workflow
+8. Automated testing
 
 Planned improvements include:
 
 * More sample economic datasets
-* More beginner-friendly tutorials
-* Additional visualization examples
-* More tests for edge cases
-* Expanded documentation for economics students
-* More practical examples connecting economic theory with Python analysis
+* More tutorials for economics students
+* Additional visualization tools
+* More robust validation
+* Expanded scenario assumptions
+* More examples connecting economic theory with Python analysis
 
 ## Contributing
 
@@ -231,31 +283,6 @@ Please read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) file before participati
 ## Maintainer
 
 This project is maintained by Gyujin Lee.
-
-## Macro Scenario Simulator
-
-EconKit includes a simple macroeconomic scenario simulator.
-
-The simulator can generate and compare several beginner-friendly macroeconomic scenarios:
-
-* Baseline scenario
-* Inflation shock scenario
-* Recession shock scenario
-* Tight monetary policy scenario
-
-Run the scenario example with:
-
-python examples/run_macro_scenarios.py
-
-The scenario simulator generates:
-
-* Scenario CSV files
-* A scenario comparison table
-* A Markdown scenario analysis report
-
-This feature helps students understand how different macroeconomic shocks may affect GDP growth, inflation, unemployment, interest rates, and overall macro risk.
-
-The simulator is designed for educational use and is not intended to be a professional forecasting model.
 
 ## License
 
