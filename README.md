@@ -152,3 +152,23 @@ python examples/generate_report.py
 A sample economic report is available here:
 
 [docs/sample_report.md](docs/sample_report.md)
+
+## Macro Risk Analyzer
+
+EconKit includes a simple macroeconomic risk analyzer.
+
+The macro risk analyzer uses the latest observation in a dataset to classify basic macroeconomic conditions, including:
+
+* Inflation pressure
+* GDP growth condition
+* Labor market condition
+* Monetary condition
+* Overall macroeconomic risk level
+
+Run the macro risk analysis example with:
+
+`python examples/analyze_macro_risk.py`
+
+The analyzer produces a beginner-friendly summary that helps students connect macroeconomic indicators with basic economic interpretation.
+
+This feature is designed for educational use. It is not intended to be a formal forecast or professional economic assessment.
