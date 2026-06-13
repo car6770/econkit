@@ -428,14 +428,21 @@ def build_parser():
     return parser
 
 
-def run_cli():
+def main(argv=None):
     """
     Run the EconKit command-line interface.
     """
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     args.func(args)
 
 
+def run_cli():
+    """
+    Backward-compatible CLI entry point.
+    """
+    main()
+
+
 if __name__ == "__main__":
-    run_cli()
+    main()
