@@ -1,7 +1,39 @@
 import argparse
+import json
 from pathlib import Path
 
-from econkit import analyze_macro_risk, generate_economic_report, load_economic_data
+from econkit import (
+    analyze_macro_risk,
+    generate_economic_report,
+    generate_macro_scenario_analysis,
+    load_economic_data,
+)
+
+
+REQUIRED_COLUMNS = [
+    "year",
+    "gdp_growth",
+    "inflation_rate",
+    "unemployment_rate",
+    "interest_rate",
+]
+
+
+def validate_dataset(data):
+    """
+    Validate that the dataset includes the required macroeconomic columns.
+    """
+    missing_columns = [
+        column for column in REQUIRED_COLUMNS if column not in data.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    if data.empty:
+        raise ValueError("Dataset is empty.")
+
+    return True
 
 
 def save_macro_risk_summary(analysis, output_dir):
@@ -44,50 +76,218 @@ def save_macro_risk_summary(analysis, output_dir):
     return output_path
 
 
+def save_macro_risk_json(analysis, output_dir):
+    """
+    Save macro risk analysis results as a JSON file.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    output_path = output_dir / "macro_risk_summary.json"
+
+    output_path.write_text(
+        json.dumps(analysis, indent=2),
+        encoding="utf-8",
+    )
+
+    return output_path
+
+
+def command_validate(args):
+    """
+    Validate an economic dataset.
+    """
+    data = load_economic_data(args.data_path)
+    validate_dataset(data)
+
+    print("Dataset validation passed.")
+    print(f"Rows: {len(data)}")
+    print(f"Columns: {', '.join(data.columns)}")
+
+
+def command_report(args):
+    """
+    Generate an economic report and charts.
+    """
+    data = load_economic_data(args.data_path)
+    validate_dataset(data)
+
+    report_path = generate_economic_report(args.data_path, args.output_dir)
+
+    print("Economic report generated successfully.")
+    print(f"Report saved to: {report_path}")
+
+
+def command_risk(args):
+    """
+    Generate macro risk analysis outputs.
+    """
+    data = load_economic_data(args.data_path)
+    validate_dataset(data)
+
+    analysis = analyze_macro_risk(data)
+
+    markdown_path = save_macro_risk_summary(analysis, args.output_dir)
+    json_path = save_macro_risk_json(analysis, args.output_dir)
+
+    print("Macro risk analysis completed.")
+    print(f"Markdown summary saved to: {markdown_path}")
+    print(f"JSON summary saved to: {json_path}")
+    print(f"Overall macro risk: {analysis['overall_risk']}")
+
+
+def command_scenarios(args):
+    """
+    Generate macro scenario simulation outputs.
+    """
+    data = load_economic_data(args.data_path)
+    validate_dataset(data)
+
+    results = generate_macro_scenario_analysis(
+        data_path=args.data_path,
+        output_dir=args.output_dir,
+        years=args.years,
+    )
+
+    print("Macro scenario analysis completed.")
+    print(f"Scenario comparison saved to: {results['comparison_path']}")
+    print(f"Scenario report saved to: {results['report_path']}")
+    print("Generated scenario files:")
+
+    for scenario_name, scenario_path in results["scenario_paths"].items():
+        print(f"- {scenario_name}: {scenario_path}")
+
+
+def command_all(args):
+    """
+    Run the full EconKit analysis pipeline.
+    """
+    data = load_economic_data(args.data_path)
+    validate_dataset(data)
+
+    output_dir = Path(args.output_dir)
+    report_dir = output_dir / "report"
+    risk_dir = output_dir / "risk"
+    scenario_dir = output_dir / "scenarios"
+
+    report_path = generate_economic_report(args.data_path, report_dir)
+
+    analysis = analyze_macro_risk(data)
+    risk_markdown_path = save_macro_risk_summary(analysis, risk_dir)
+    risk_json_path = save_macro_risk_json(analysis, risk_dir)
+
+    scenario_results = generate_macro_scenario_analysis(
+        data_path=args.data_path,
+        output_dir=scenario_dir,
+        years=args.years,
+    )
+
+    print("EconKit full analysis completed.")
+    print("")
+    print("Generated outputs:")
+    print(f"- Economic report: {report_path}")
+    print(f"- Macro risk Markdown summary: {risk_markdown_path}")
+    print(f"- Macro risk JSON summary: {risk_json_path}")
+    print(f"- Scenario comparison: {scenario_results['comparison_path']}")
+    print(f"- Scenario report: {scenario_results['report_path']}")
+    print("")
+    print(f"Overall macro risk: {analysis['overall_risk']}")
+    print(f"Summary: {analysis['summary']}")
+
+
+def build_parser():
+    """
+    Build the EconKit command-line parser.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "EconKit: beginner-friendly economics data analysis, reporting, "
+            "macro risk analysis, and scenario simulation."
+        )
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="command",
+        required=True,
+    )
+
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate an economic CSV dataset."
+    )
+    validate_parser.add_argument("data_path")
+    validate_parser.set_defaults(func=command_validate)
+
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Generate an economic report and charts."
+    )
+    report_parser.add_argument("data_path")
+    report_parser.add_argument(
+        "--output-dir",
+        default="outputs/report",
+        help="Directory where report outputs will be saved."
+    )
+    report_parser.set_defaults(func=command_report)
+
+    risk_parser = subparsers.add_parser(
+        "risk",
+        help="Generate macro risk analysis outputs."
+    )
+    risk_parser.add_argument("data_path")
+    risk_parser.add_argument(
+        "--output-dir",
+        default="outputs/risk",
+        help="Directory where risk outputs will be saved."
+    )
+    risk_parser.set_defaults(func=command_risk)
+
+    scenarios_parser = subparsers.add_parser(
+        "scenarios",
+        help="Generate macroeconomic scenario simulation outputs."
+    )
+    scenarios_parser.add_argument("data_path")
+    scenarios_parser.add_argument(
+        "--output-dir",
+        default="outputs/scenarios",
+        help="Directory where scenario outputs will be saved."
+    )
+    scenarios_parser.add_argument(
+        "--years",
+        type=int,
+        default=5,
+        help="Number of future years to simulate."
+    )
+    scenarios_parser.set_defaults(func=command_scenarios)
+
+    all_parser = subparsers.add_parser(
+        "all",
+        help="Run the full EconKit analysis pipeline."
+    )
+    all_parser.add_argument("data_path")
+    all_parser.add_argument(
+        "--output-dir",
+        default="outputs",
+        help="Directory where all outputs will be saved."
+    )
+    all_parser.add_argument(
+        "--years",
+        type=int,
+        default=5,
+        help="Number of future years to simulate."
+    )
+    all_parser.set_defaults(func=command_all)
+
+    return parser
+
+
 def run_cli():
     """
     Run the EconKit command-line interface.
     """
-    parser = argparse.ArgumentParser(
-        description="Generate beginner-friendly economic analysis reports."
-    )
-
-    parser.add_argument(
-        "data_path",
-        help="Path to the economic CSV dataset."
-    )
-
-    parser.add_argument(
-        "--output-dir",
-        default="outputs",
-        help="Directory where generated reports and charts will be saved."
-    )
-
+    parser = build_parser()
     args = parser.parse_args()
-
-    data_path = Path(args.data_path)
-    output_dir = Path(args.output_dir)
-
-    if not data_path.exists():
-        raise FileNotFoundError(f"Dataset not found: {data_path}")
-
-    print("Running EconKit analysis...")
-    print(f"Dataset: {data_path}")
-    print(f"Output directory: {output_dir}")
-    print()
-
-    report_path = generate_economic_report(data_path, output_dir)
-
-    data = load_economic_data(data_path)
-    macro_risk_analysis = analyze_macro_risk(data)
-    risk_summary_path = save_macro_risk_summary(macro_risk_analysis, output_dir)
-
-    print("Analysis completed successfully.")
-    print(f"Economic report: {report_path}")
-    print(f"Macro risk summary: {risk_summary_path}")
-    print()
-    print("Overall macro risk:", macro_risk_analysis["overall_risk"])
-    print("Summary:", macro_risk_analysis["summary"])
+    args.func(args)
 
 
 if __name__ == "__main__":
