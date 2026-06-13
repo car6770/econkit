@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "econkit"
+version = "1.0.0"
+description = "Beginner-friendly Python toolkit for economics data analysis, reporting, macro risk analysis, and scenario simulation."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Gyujin Lee" }
+]
+keywords = [
+    "economics",
+    "macroeconomics",
+    "data-analysis",
+    "education",
+    "python",
+    "pandas",
+    "matplotlib"
+]
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "tabulate"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[project.scripts]
+econkit = "econkit_cli:run_cli"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["econkit", "econkit_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
